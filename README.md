@@ -84,6 +84,17 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
     mermaid = true
 ```
 
+### Standalone single-book homepage
+
+A repository containing one primary book can render that book directly at `/` without copying a home layout or creating a root alias:
+
+```toml
+[params.bookkit]
+  homeBook = "my-book"
+```
+
+`homeBook` is resolved below `bookSection` (which defaults to `books`). The same reusable book-page partial renders both `/` and `/books/my-book/`, so the two surfaces stay visually and behaviorally consistent.
+
 Site-local layouts always take precedence over module layouts, so a book or site can override any BookKit template without forking the module.
 
 ## What deliberately stays outside BookKit
@@ -96,4 +107,4 @@ See [`docs/migration-from-next-books.md`](docs/migration-from-next-books.md) for
 
 ## Verification
 
-`exampleSite/` is a minimal consumer of the module. CI builds it on every push and pull request so reusable behavior is exercised through the same import mechanism a real book site uses.
+`exampleSite/` is a minimal consumer of the module. CI builds it on every push and pull request so reusable behavior is exercised through the same import mechanism a real book site uses, including the standalone `homeBook` homepage path.

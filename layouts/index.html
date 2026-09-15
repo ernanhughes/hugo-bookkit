@@ -1,0 +1,21 @@
+{{ define "main" }}
+  {{- $cfg := .Site.Params.bookkit -}}
+  {{- $bookSection := $cfg.bookSection | default "books" -}}
+  {{- $homeBook := $cfg.homeBook | default "" -}}
+
+  {{- if $homeBook -}}
+    {{- $bookPath := printf "/%s/%s" $bookSection $homeBook -}}
+    {{- with .Site.GetPage $bookPath -}}
+      {{ partial "bookkit/book-page.html" . }}
+    {{- else -}}
+      {{ errorf "BookKit homeBook %q was not found at %q" $homeBook $bookPath }}
+    {{- end -}}
+  {{- else -}}
+    <section class="bookkit-page-header">
+      <span class="bookkit-eyebrow">{{ $cfg.brandLabel | default "Book" }}</span>
+      <h1>{{ .Site.Title }}</h1>
+      {{ with .Site.Params.description }}<p class="bookkit-lede">{{ . }}</p>{{ end }}
+      <p><a class="bookkit-text-link" href="{{ printf "/%s/" $bookSection | relURL }}">Open library →</a></p>
+    </section>
+  {{- end -}}
+{{ end }}
