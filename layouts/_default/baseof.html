@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="{{ .Site.Language.Locale | default "en" }}">
+<head>
+  {{ partial "bookkit/head.html" . }}
+</head>
+<body class="bookkit-site">
+  {{ partial "bookkit/header.html" . }}
+
+  <main class="bookkit-shell" id="main-content">
+    {{ block "main" . }}
+      {{ with .Content }}
+        <article class="bookkit-prose">{{ . }}</article>
+      {{ end }}
+    {{ end }}
+  </main>
+
+  {{ partial "bookkit/footer.html" . }}
+
+  {{- $cfg := .Site.Params.bookkit -}}
+  {{- if $cfg.reader }}
+    <script src="{{ "js/book-reader.js" | relURL }}" defer></script>
+  {{- end }}
+  {{- range $cfg.customJS }}
+    <script src="{{ . | relURL }}" defer></script>
+  {{- end }}
+
+  {{ partial "bookkit/math.html" . }}
+
+  {{- if and (.Store.Get "bookkitHasMermaid") $cfg.features.mermaid }}
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+  {{- end }}
+</body>
+</html>

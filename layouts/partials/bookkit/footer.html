@@ -1,0 +1,9 @@
+<footer class="bookkit-footer">
+  <div class="bookkit-footer__inner">
+    {{- with .Site.Params.bookkit.footerText -}}
+      <p>{{ . }}</p>
+    {{- else -}}
+      <p>&copy; {{ now.Year }} {{ .Site.Title }}</p>
+    {{- end }}
+  </div>
+</footer>

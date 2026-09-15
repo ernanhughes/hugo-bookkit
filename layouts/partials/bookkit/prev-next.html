@@ -1,0 +1,28 @@
+{{- $book := .book -}}
+{{- $current := .current -}}
+{{- $pages := $book.RegularPages.ByWeight -}}
+{{- $currentIndex := -1 -}}
+{{- range $i, $page := $pages -}}
+  {{- if eq $page.RelPermalink $current.RelPermalink -}}
+    {{- $currentIndex = $i -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if ge $currentIndex 0 -}}
+  <nav class="bookkit-prev-next" aria-label="Previous and next chapter">
+    <div>
+      {{- if gt $currentIndex 0 -}}
+        {{- $previous := index $pages (sub $currentIndex 1) -}}
+        <span class="bookkit-prev-next__label">Previous</span>
+        <a href="{{ $previous.RelPermalink }}">← {{ $previous.Title }}</a>
+      {{- end -}}
+    </div>
+    <div class="bookkit-prev-next__next">
+      {{- if lt (add $currentIndex 1) (len $pages) -}}
+        {{- $next := index $pages (add $currentIndex 1) -}}
+        <span class="bookkit-prev-next__label">Next</span>
+        <a href="{{ $next.RelPermalink }}">{{ $next.Title }} →</a>
+      {{- end -}}
+    </div>
+  </nav>
+{{- end -}}

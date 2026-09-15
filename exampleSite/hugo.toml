@@ -1,0 +1,21 @@
+baseURL = "https://example.org/"
+locale = "en-US"
+title = "BookKit Example"
+disableKinds = ["home", "taxonomy", "term", "rss"]
+
+[module]
+  [[module.imports]]
+    path = "github.com/ernanhughes/hugo-bookkit"
+
+[params]
+  description = "A minimal site exercising Hugo BookKit as an imported module."
+
+  [params.bookkit]
+    brandLabel = "Example Book"
+    accent = "#3978c5"
+    storagePrefix = "bookkit-example:progress:"
+
+[[menu.main]]
+  name = "Books"
+  url = "/books/"
+  weight = 10

@@ -1,0 +1,16 @@
+{{- $page := .page -}}
+{{- $position := .position | default 1 -}}
+{{- $number := printf "%02d" $position -}}
+
+{{- with $page.Params.chapter_number -}}
+  {{- $number = printf "%v" . -}}
+{{- else -}}
+  {{- with $page.File -}}
+    {{- $matches := findRE `^[0-9]+` .BaseFileName -}}
+    {{- if gt (len $matches) 0 -}}
+      {{- $number = index $matches 0 -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return $number -}}

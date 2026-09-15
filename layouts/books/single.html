@@ -1,0 +1,24 @@
+{{ define "main" }}
+  {{- $book := .Parent -}}
+  <article class="bookkit-chapter">
+    <header class="bookkit-chapter-header">
+      {{- with $book }}
+        <a class="bookkit-backlink" href="{{ .RelPermalink }}">← {{ .Title }}</a>
+      {{- end }}
+      <h1>{{ .Title }}</h1>
+      {{ with .Description }}<p class="bookkit-lede">{{ . }}</p>{{ end }}
+    </header>
+
+    {{- if and $book .Site.Params.bookkit.reader }}
+      {{ partial "bookkit/book-reader-nav.html" (dict "book" $book "current" . "mode" "chapter") }}
+    {{- end }}
+
+    <div class="bookkit-prose">
+      {{ .Content }}
+    </div>
+
+    {{- with $book }}
+      {{ partial "bookkit/prev-next.html" (dict "book" . "current" $) }}
+    {{- end }}
+  </article>
+{{ end }}

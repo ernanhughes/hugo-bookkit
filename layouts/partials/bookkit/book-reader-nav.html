@@ -1,0 +1,82 @@
+{{- $book := .book -}}
+{{- $current := .current -}}
+{{- $mode := .mode | default "landing" -}}
+{{- $pages := $book.RegularPages.ByWeight -}}
+{{- $cfg := $book.Site.Params.bookkit -}}
+
+{{- if gt (len $pages) 0 -}}
+  {{- $bookSlug := path.Base (strings.TrimSuffix "/" $book.RelPermalink) -}}
+  {{- $first := index $pages 0 -}}
+  {{- $firstNumber := partial "bookkit/chapter-number.html" (dict "page" $first "position" 1) -}}
+  {{- $currentURL := "" -}}
+  {{- $currentTitle := "" -}}
+  {{- $currentPosition := 0 -}}
+  {{- $currentNumber := "" -}}
+
+  {{- if $current -}}
+    {{- $currentURL = $current.RelPermalink -}}
+    {{- $currentTitle = $current.Title -}}
+    {{- range $i, $chapter := $pages -}}
+      {{- if eq $chapter.RelPermalink $current.RelPermalink -}}
+        {{- $currentPosition = add $i 1 -}}
+        {{- $currentNumber = partial "bookkit/chapter-number.html" (dict "page" $chapter "position" $currentPosition) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+
+  <nav
+    class="bookkit-reader bookkit-reader--{{ $mode }}"
+    aria-label="Book chapter navigation"
+    data-book-reader
+    data-book-slug="{{ $bookSlug }}"
+    data-storage-prefix="{{ $cfg.storagePrefix | default "hugo-bookkit:progress:" }}"
+    data-progress-enabled="{{ if $cfg.progress }}true{{ else }}false{{ end }}"
+    {{- if $currentURL }}
+      data-current-url="{{ $currentURL }}"
+      data-current-title="{{ $currentTitle }}"
+      data-current-position="{{ $currentPosition }}"
+      data-current-number="{{ $currentNumber }}"
+    {{- end }}
+  >
+    {{- if eq $mode "landing" -}}
+      <div class="bookkit-resume" data-book-resume>
+        <span class="bookkit-resume__kicker" data-book-resume-kicker>Start reading</span>
+        <a class="bookkit-resume__link" href="{{ $first.RelPermalink }}" data-book-resume-link>
+          <strong data-book-resume-title>{{ $first.Title }}</strong>
+          <span data-book-resume-action>Start Chapter {{ $firstNumber }} →</span>
+        </a>
+      </div>
+    {{- else -}}
+      <div class="bookkit-reader__context">
+        <a href="{{ $book.RelPermalink }}">{{ $book.Title }}</a>
+        {{- if gt $currentPosition 0 }}
+          <span>Chapter {{ $currentNumber }} of {{ len $pages }}</span>
+        {{- end }}
+      </div>
+    {{- end -}}
+
+    <div class="bookkit-reader__header">
+      <span class="bookkit-eyebrow">Chapters</span>
+      <span class="bookkit-reader__count">{{ len $pages }} chapters</span>
+    </div>
+
+    <div class="bookkit-reader__chapters" aria-label="Jump to chapter">
+      {{- range $i, $chapter := $pages -}}
+        {{- $position := add $i 1 -}}
+        {{- $number := partial "bookkit/chapter-number.html" (dict "page" $chapter "position" $position) -}}
+        {{- $isCurrent := and $current (eq $chapter.RelPermalink $current.RelPermalink) -}}
+        <a
+          href="{{ $chapter.RelPermalink }}"
+          class="bookkit-reader__chapter{{ if $isCurrent }} is-current{{ end }}"
+          title="Chapter {{ $number }}: {{ $chapter.Title }}"
+          aria-label="Chapter {{ $number }}: {{ $chapter.Title }}"
+          data-chapter-url="{{ $chapter.RelPermalink }}"
+          data-chapter-title="{{ $chapter.Title }}"
+          data-chapter-number="{{ $number }}"
+          data-chapter-position="{{ $position }}"
+          {{- if $isCurrent }} aria-current="page"{{ end -}}
+        >{{ $number }}</a>
+      {{- end -}}
+    </div>
+  </nav>
+{{- end -}}
