@@ -6,6 +6,7 @@
 [params.bookkit]
   brandLabel = "Book"
   bookSection = "books"
+  homeBook = ""
   reader = true
   progress = true
   accent = "#3978c5"
