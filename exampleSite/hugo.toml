@@ -1,7 +1,7 @@
 baseURL = "https://example.org/"
 languageCode = "en-us"
 title = "BookKit Example"
-disableKinds = ["home", "taxonomy", "term", "RSS"]
+disableKinds = ["home", "taxonomy", "term", "rss"]
 
 [module]
   [[module.imports]]
