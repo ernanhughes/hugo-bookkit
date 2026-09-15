@@ -1,0 +1,52 @@
+{{- $book := . -}}
+{{- $cover := partial "bookkit/book-cover-path.html" $book -}}
+<article class="bookkit-book">
+  <header class="bookkit-book-hero{{ if not $cover }} bookkit-book-hero--no-cover{{ end }}">
+    {{- if $cover }}
+      <div class="bookkit-book-hero__cover">
+        {{ partial "bookkit/book-cover.html" (dict "book" $book "size" "full") }}
+        {{- if $book.Site.Params.bookkit.showStores }}
+          {{ partial "bookkit/book-store-links.html" (dict "book" $book "variant" "cover") }}
+        {{- end }}
+      </div>
+    {{- end }}
+
+    <div class="bookkit-book-hero__content">
+      <span class="bookkit-eyebrow">{{ $book.Site.Params.bookkit.brandLabel | default "Book" }}</span>
+      {{- if $book.Site.Params.bookkit.showStatus }}
+        {{ partial "bookkit/book-status.html" $book }}
+      {{- end }}
+      <h1>{{ $book.Title }}</h1>
+      {{ with $book.Description }}<p class="bookkit-lede">{{ . }}</p>{{ end }}
+
+      {{- if $book.Site.Params.bookkit.reader }}
+        {{ partial "bookkit/book-reader-nav.html" (dict "book" $book "current" false "mode" "landing") }}
+      {{- end }}
+
+      {{- if and (not $cover) $book.Site.Params.bookkit.showStores }}
+        {{ partial "bookkit/book-store-links.html" (dict "book" $book "variant" "inline") }}
+      {{- end }}
+
+      {{ with $book.Content }}<div class="bookkit-prose bookkit-book-intro">{{ . }}</div>{{ end }}
+    </div>
+  </header>
+
+  {{- if $book.Site.Params.bookkit.showChapterList }}
+    <section class="bookkit-chapters" id="contents">
+      <span class="bookkit-eyebrow">Contents</span>
+      <h2>Chapters</h2>
+      <div class="bookkit-chapter-list">
+        {{- range $i, $chapter := $book.RegularPages.ByWeight }}
+          {{- $number := partial "bookkit/chapter-number.html" (dict "page" $chapter "position" (add $i 1)) -}}
+          <article class="bookkit-chapter-card">
+            <span class="bookkit-chapter-card__number">{{ $number }}</span>
+            <div>
+              <h3><a href="{{ $chapter.RelPermalink }}">{{ $chapter.Title }}</a></h3>
+              {{ with $chapter.Description }}<p>{{ . }}</p>{{ end }}
+            </div>
+          </article>
+        {{- end }}
+      </div>
+    </section>
+  {{- end }}
+</article>
