@@ -1,7 +1,7 @@
 baseURL = "https://example.org/"
 locale = "en-US"
 title = "BookKit Example"
-disableKinds = ["home", "taxonomy", "term", "rss"]
+disableKinds = ["taxonomy", "term", "rss"]
 
 [module]
   [[module.imports]]
@@ -12,6 +12,7 @@ disableKinds = ["home", "taxonomy", "term", "rss"]
 
   [params.bookkit]
     brandLabel = "Example Book"
+    homeBook = "demo-book"
     accent = "#3978c5"
     storagePrefix = "bookkit-example:progress:"
 
