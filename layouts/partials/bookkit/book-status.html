@@ -1,0 +1,12 @@
+{{- $book := . -}}
+{{- $status := $book.Params.publication_status | default "" -}}
+{{- $labels := dict
+  "development" "In development"
+  "final-review" "Final review"
+  "coming-soon" "Coming soon"
+  "published" "Published"
+-}}
+{{- if $status -}}
+  {{- $label := $book.Params.publication_status_label | default (index $labels $status) | default $status -}}
+  <span class="bookkit-status bookkit-status--{{ $status | urlize }}">{{ $label }}</span>
+{{- end -}}

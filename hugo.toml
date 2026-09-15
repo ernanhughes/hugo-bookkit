@@ -1,0 +1,32 @@
+[module]
+  [module.hugoVersion]
+    min = "0.146.0"
+    extended = false
+
+[params.bookkit]
+  brandLabel = "Book"
+  bookSection = "books"
+  reader = true
+  progress = true
+  accent = "#3978c5"
+  contentWidth = "760px"
+  coverRoot = "/images/books"
+  storagePrefix = "hugo-bookkit:progress:"
+  showStatus = true
+  showStores = true
+  showChapterList = true
+
+  [params.bookkit.features]
+    math = true
+    mermaid = true
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+    [markup.goldmark.extensions]
+      [markup.goldmark.extensions.passthrough]
+        enable = true
+        [markup.goldmark.extensions.passthrough.delimiters]
+          block = [['\[', '\]'], ['$$', '$$']]
+          inline = [['\(', '\)'], ['$', '$']]

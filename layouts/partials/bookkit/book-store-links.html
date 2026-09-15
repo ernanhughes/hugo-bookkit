@@ -1,0 +1,30 @@
+{{- $book := .book -}}
+{{- $variant := .variant | default "inline" -}}
+
+{{- with $book.Params.stores -}}
+  <div class="bookkit-stores bookkit-stores--{{ $variant }}" aria-label="Book stores and links">
+    {{- range . }}
+      {{- if and .label .url }}
+        <a class="bookkit-store bookkit-store--{{ .kind | default "link" | urlize }}" href="{{ .url }}" rel="noopener" target="_blank">{{ .label }}</a>
+      {{- end }}
+    {{- end }}
+  </div>
+{{- else -}}
+  {{- $amazonURL := "" -}}
+  {{- $googleURL := "" -}}
+  {{- with $book.Params.publication_amazon_url }}{{ $amazonURL = . }}{{ end -}}
+  {{- with $book.Params.publication_google }}{{ $googleURL = . }}{{ end -}}
+  {{- with $book.Params.publication -}}
+    {{- with .amazon }}{{ $amazonURL = . }}{{ end -}}
+    {{- with .amazon_url }}{{ $amazonURL = . }}{{ end -}}
+    {{- with .google }}{{ $googleURL = . }}{{ end -}}
+    {{- with .google_play }}{{ $googleURL = . }}{{ end -}}
+    {{- with .google_play_url }}{{ $googleURL = . }}{{ end -}}
+  {{- end -}}
+  {{- if or $amazonURL $googleURL }}
+    <div class="bookkit-stores bookkit-stores--{{ $variant }}" aria-label="Book stores">
+      {{- with $amazonURL }}<a class="bookkit-store bookkit-store--amazon" href="{{ . }}" rel="noopener" target="_blank">Amazon</a>{{ end -}}
+      {{- with $googleURL }}<a class="bookkit-store bookkit-store--google" href="{{ . }}" rel="noopener" target="_blank">Google Play</a>{{ end -}}
+    </div>
+  {{- end }}
+{{- end -}}

@@ -1,0 +1,8 @@
+{{- $book := .book -}}
+{{- $size := .size | default "full" -}}
+{{- $coverURL := partial "bookkit/book-cover-path.html" $book -}}
+{{- if $coverURL -}}
+  <figure class="bookkit-cover bookkit-cover--{{ $size }}">
+    <img src="{{ $coverURL | relURL }}" alt="{{ $book.Title }} cover" loading="lazy">
+  </figure>
+{{- end -}}

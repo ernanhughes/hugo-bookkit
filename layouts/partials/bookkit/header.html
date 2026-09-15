@@ -1,0 +1,12 @@
+<header class="bookkit-header">
+  <div class="bookkit-header__inner">
+    <a class="bookkit-brand" href="{{ .Site.Home.RelPermalink }}">{{ .Site.Title }}</a>
+    {{- with .Site.Menus.main }}
+      <nav class="bookkit-menu" aria-label="Main navigation">
+        {{- range . }}
+          <a href="{{ .URL | relURL }}">{{ .Name }}</a>
+        {{- end }}
+      </nav>
+    {{- end }}
+  </div>
+</header>

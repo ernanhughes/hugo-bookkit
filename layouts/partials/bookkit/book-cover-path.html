@@ -1,0 +1,21 @@
+{{- $book := . -}}
+{{- $coverURL := "" -}}
+
+{{- with $book.Params.cover -}}
+  {{- $coverURL = . -}}
+{{- else -}}
+  {{- with $book.Resources.GetMatch "cover.*" -}}
+    {{- $coverURL = .RelPermalink -}}
+  {{- else -}}
+    {{- $bookSlug := path.Base (strings.TrimSuffix "/" $book.RelPermalink) -}}
+    {{- $root := $book.Site.Params.bookkit.coverRoot | default "/images/books" -}}
+    {{- $root = strings.TrimSuffix "/" $root -}}
+    {{- $candidateURL := printf "%s/%s/cover.png" $root $bookSlug -}}
+    {{- $candidateFile := printf "static%s" $candidateURL -}}
+    {{- if fileExists $candidateFile -}}
+      {{- $coverURL = $candidateURL -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return $coverURL -}}
