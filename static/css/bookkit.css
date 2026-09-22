@@ -83,6 +83,21 @@ img { max-width: 100%; height: auto; }
 .bookkit-prose code:not(pre code) { padding: 0.15em 0.35em; border-radius: 5px; background: #f1f5f9; }
 .bookkit-prose blockquote { margin-left: 0; padding-left: 1rem; border-left: 3px solid var(--bookkit-accent); color: var(--bookkit-muted); }
 
+.bookkit-figure { margin: 2rem 0; }
+.bookkit-figure img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 10px;
+  background: #fff;
+}
+.bookkit-figure figcaption {
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--bookkit-muted);
+}
+
 .bookkit-book-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .bookkit-book-card {
   display: grid;

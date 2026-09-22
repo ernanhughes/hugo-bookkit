@@ -1,0 +1,29 @@
+{{- /*
+  bookfig — a figure with a caption and required alt text.
+
+  Resolves src through relURL so it survives a site's baseURL path prefix
+  (e.g. a project site published under /mybook/). Alt text is mandatory: a
+  figure without it is unreadable to part of the audience and the build
+  should say so rather than ship it.
+
+  Params:
+    src      (required) path under the site's static root, no leading slash
+    alt      (required) description of what the figure shows
+    caption  (optional) markdown; says what the figure shows
+    width    (optional) CSS width, e.g. "80%" — defaults to full column
+
+  Usage:
+    {{< bookfig src="images/books/mybook/fig-1.svg"
+                alt="Bar chart of task success by condition."
+                caption="Both history conditions fall below the floor." >}}
+*/ -}}
+{{- $src := .Get "src" -}}
+{{- $alt := .Get "alt" -}}
+{{- if not $src }}{{ errorf "bookfig: src is required (%s)" .Position }}{{ end -}}
+{{- if not $alt }}{{ errorf "bookfig: alt text is required (%s)" .Position }}{{ end -}}
+<figure class="bookkit-figure"{{ with .Get "width" }} style="width:{{ . }}"{{ end }}>
+  <img src="{{ $src | relURL }}" alt="{{ $alt }}" loading="lazy" decoding="async">
+  {{- with .Get "caption" }}
+  <figcaption>{{ . | markdownify }}</figcaption>
+  {{- end }}
+</figure>
