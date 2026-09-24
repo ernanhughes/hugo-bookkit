@@ -235,6 +235,94 @@ img { max-width: 100%; height: auto; }
 
 .mermaid { overflow-x: auto; padding: 1rem; text-align: center; }
 
+/* Solutions */
+
+.bookkit-solutions,
+.bookkit-solution {
+  width: min(var(--bookkit-content-width), 100%);
+  margin-inline: auto;
+}
+
+.bookkit-solution-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.bookkit-solution-card {
+  padding: 1.35rem 1.5rem;
+  border: 1px solid var(--bookkit-border);
+  border-radius: var(--bookkit-radius);
+  background: var(--bookkit-card);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.bookkit-solution-card:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--bookkit-accent) 35%,
+    var(--bookkit-border)
+  );
+  box-shadow: var(--bookkit-shadow);
+  transform: translateY(-1px);
+}
+
+.bookkit-solution-card h2 {
+  margin: 0.35rem 0 0.6rem;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.bookkit-solution-card h2 a {
+  color: var(--bookkit-text);
+  text-decoration: none;
+}
+
+.bookkit-solution-card h2 a:hover {
+  color: var(--bookkit-accent);
+}
+
+.bookkit-solution-card p {
+  margin: 0.6rem 0;
+  color: var(--bookkit-muted);
+}
+
+.bookkit-solution-card__meta,
+.bookkit-solution-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bookkit-solution-card__meta .bookkit-status,
+.bookkit-solution-meta .bookkit-status {
+  margin: 0;
+}
+
+.bookkit-solution-card__related {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.bookkit-solution-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--bookkit-border);
+}
+
+/* Keep long-form solution prose at the same readable measure as chapters. */
+.bookkit-solution > .bookkit-prose {
+  width: 100%;
+}
+
 @media (max-width: 760px) {
   .bookkit-shell { padding-top: 2rem; }
   .bookkit-header__inner { align-items: flex-start; flex-direction: column; }
