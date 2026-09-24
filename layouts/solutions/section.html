@@ -1,24 +1,57 @@
 {{ define "main" }}
-<section class="bookkit-prose">
+<section class="bookkit-solutions">
   <header class="bookkit-page-header">
+    <span class="bookkit-eyebrow">Solutions</span>
     <h1>{{ .Title }}</h1>
+
     {{ with .Description }}
-      <p>{{ . }}</p>
+      <p class="bookkit-lede">{{ . }}</p>
+    {{ end }}
+
+    {{ with .Content }}
+      <div class="bookkit-prose">
+        {{ . }}
+      </div>
     {{ end }}
   </header>
 
-  {{ .Content }}
+  <div class="bookkit-solution-list">
+    {{ range .RegularPages.ByWeight }}
+      <article class="bookkit-solution-card">
 
-  {{ range .RegularPages.ByWeight }}
-    <article>
-      <h2>
-        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
-      </h2>
+        <div class="bookkit-solution-card__meta">
+          {{ with .Params.solution_type }}
+            <span class="bookkit-eyebrow">{{ . | humanize }}</span>
+          {{ end }}
 
-      {{ with .Description }}
-        <p>{{ . }}</p>
-      {{ end }}
-    </article>
-  {{ end }}
+          {{ with .Params.status }}
+            <span class="bookkit-status">{{ . | humanize }}</span>
+          {{ end }}
+        </div>
+
+        <h2>
+          <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        </h2>
+
+        {{ with .Params.lead }}
+          <p>{{ . }}</p>
+        {{ else }}
+          {{ with .Description }}
+            <p>{{ . }}</p>
+          {{ end }}
+        {{ end }}
+
+        {{ with .Params.related_book }}
+          <p class="bookkit-solution-card__related">
+            Related book: {{ . }}
+          </p>
+        {{ end }}
+
+        <a class="bookkit-text-link" href="{{ .RelPermalink }}">
+          View solution →
+        </a>
+      </article>
+    {{ end }}
+  </div>
 </section>
 {{ end }}

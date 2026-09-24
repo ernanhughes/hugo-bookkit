@@ -1,13 +1,53 @@
 {{ define "main" }}
-<article class="bookkit-prose">
+<article class="bookkit-solution">
   <header class="bookkit-page-header">
+
+    <div class="bookkit-solution-meta">
+      {{ with .Params.solution_type }}
+        <span class="bookkit-eyebrow">{{ . | humanize }}</span>
+      {{ end }}
+
+      {{ with .Params.status }}
+        <span class="bookkit-status">{{ . | humanize }}</span>
+      {{ end }}
+    </div>
+
     <h1>{{ .Title }}</h1>
 
-    {{ with .Description }}
-      <p>{{ . }}</p>
+    {{ with .Params.lead }}
+      <p class="bookkit-lede">{{ . }}</p>
+    {{ else }}
+      {{ with .Description }}
+        <p class="bookkit-lede">{{ . }}</p>
+      {{ end }}
     {{ end }}
+
+    {{ if or .Params.repository_url .Params.related_book_url }}
+      <div class="bookkit-solution-links">
+
+        {{ with .Params.repository_url }}
+          <a class="bookkit-text-link" href="{{ . }}">
+            Repository →
+          </a>
+        {{ end }}
+
+        {{ with .Params.related_book_url }}
+          <a class="bookkit-text-link" href="{{ . }}">
+            {{ with $.Params.related_book }}
+              {{ . }} →
+            {{ else }}
+              Related book →
+            {{ end }}
+          </a>
+        {{ end }}
+
+      </div>
+    {{ end }}
+
   </header>
 
-  {{ .Content }}
+  <div class="bookkit-prose">
+    {{ .Content }}
+  </div>
 </article>
 {{ end }}
