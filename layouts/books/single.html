@@ -13,6 +13,10 @@
       {{ partial "bookkit/book-reader-nav.html" (dict "book" $book "current" . "mode" "chapter") }}
     {{- end }}
 
+    {{- with .Site.Params.bookkit.chapterBeforeContentPartial }}
+      {{ partial . $ }}
+    {{- end }}
+
     <div class="bookkit-prose">
       {{ .Content }}
     </div>
