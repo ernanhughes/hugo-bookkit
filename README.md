@@ -55,12 +55,16 @@ A book's `_index.md` can use:
 title: "My Book"
 description: "What the book teaches."
 publication_status: development
+# Optional for an already-published book being revised:
+# revision_status: rewrite
 stores:
   - label: Amazon
     kind: amazon
     url: https://example.com/
 ---
 ```
+
+Book lifecycle values are `research`, `development`, `final-review`, `coming-soon`, and `published`. Published books can additionally set `revision_status` to `revision` ("New edition in progress") or `rewrite` ("Major rewrite underway"). Publication and revision are intentionally separate so a book can remain published while a new edition is being rebuilt.
 
 A chapter should set `weight` to control order. If the filename starts with digits, BookKit uses those digits as the visible chapter number; otherwise it falls back to position.
 
