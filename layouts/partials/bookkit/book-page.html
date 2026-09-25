@@ -23,6 +23,10 @@
         {{ partial "bookkit/book-reader-nav.html" (dict "book" $book "current" false "mode" "landing") }}
       {{- end }}
 
+      {{- with $book.Site.Params.bookkit.bookExtraPartial }}
+        {{ partial . $book }}
+      {{- end }}
+
       {{- if and (not $cover) $book.Site.Params.bookkit.showStores }}
         {{ partial "bookkit/book-store-links.html" (dict "book" $book "variant" "inline") }}
       {{- end }}
