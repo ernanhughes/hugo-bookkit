@@ -82,6 +82,9 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
   storagePrefix = "hugo-bookkit:progress:"
   showStatus = true
   showStores = true
+  # Optional consuming-site partial hooks:
+  # bookExtraPartial = "book-apply-link.html"
+  # chapterBeforeContentPartial = "book-visuals.html"
 
   [params.bookkit.features]
     math = true
