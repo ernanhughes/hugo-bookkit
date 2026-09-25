@@ -1,12 +1,26 @@
 {{- $book := . -}}
 {{- $status := $book.Params.publication_status | default "" -}}
-{{- $labels := dict
+{{- $revisionStatus := $book.Params.revision_status | default "" -}}
+
+{{- $publicationLabels := dict
+  "research" "Research"
   "development" "In development"
   "final-review" "Final review"
   "coming-soon" "Coming soon"
   "published" "Published"
 -}}
+
+{{- $revisionLabels := dict
+  "revision" "New edition in progress"
+  "rewrite" "Major rewrite underway"
+-}}
+
 {{- if $status -}}
-  {{- $label := $book.Params.publication_status_label | default (index $labels $status) | default $status -}}
+  {{- $label := $book.Params.publication_status_label | default (index $publicationLabels $status) | default $status -}}
   <span class="bookkit-status bookkit-status--{{ $status | urlize }}">{{ $label }}</span>
+{{- end -}}
+
+{{- if $revisionStatus -}}
+  {{- $revisionLabel := $book.Params.revision_status_label | default (index $revisionLabels $revisionStatus) | default $revisionStatus -}}
+  <span class="bookkit-status bookkit-status--revision bookkit-status--{{ $revisionStatus | urlize }}">{{ $revisionLabel }}</span>
 {{- end -}}
