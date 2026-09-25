@@ -16,6 +16,8 @@
   showStatus = true
   showStores = true
   showChapterList = true
+  bookExtraPartial = ""
+  chapterBeforeContentPartial = ""
 
   [params.bookkit.features]
     math = true
