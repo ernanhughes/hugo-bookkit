@@ -1,0 +1,28 @@
+{{ define "title" }}Research — {{ .Title }}{{ end }}
+{{/* NOTE: NEVER_RESEARCHED noindex is emitted by
+bookkit/research/head-meta.html (called from head.html), so it works
+under any base layout. The blocks below remain as generic extension
+seams for consuming sites with their own base templates. */}}
+{{ define "bookkit_head_extra" }}{{ end }}
+{{ define "head_extra" }}{{ end }}
+{{ define "main" }}
+  {{- $ids := partial "bookkit/research/chapter-ids.html" . -}}
+  {{- $loaded := dict -}}
+  {{- with $ids }}{{ $loaded = partial "bookkit/research/dossier.html" (dict "page" $ "book" .book "chapter" .chapter) }}{{ end -}}
+  {{- $dossier := $loaded.dossier -}}
+  <main class="main research-page" role="main"
+    {{- with $ids }} data-research-book="{{ .book }}" data-research-chapter="{{ .chapter }}"{{ end -}}
+    {{- with $dossier }} data-research-run="{{ .research.run_id }}" data-research-state="{{ .research.state }}"{{ end -}}>
+    <p class="research-back"><a href="{{ strings.TrimSuffix "research.html" .RelPermalink }}">← Back to {{ .Title }}</a></p>
+    <h1 class="research-page__title">Research: {{ .Title }}</h1>
+    {{- with $dossier }}
+      {{ partial "bookkit/research/dossier-body.html" (dict "dossier" . "ids" $ids) }}
+    {{- else }}
+    <section class="research-overview" aria-label="Research overview">
+      <p class="research-notice" role="note">Research information is currently unavailable for this chapter.</p>
+    </section>
+    {{- end }}
+    {{ partial "bookkit/research/refresh-control.html" (dict "ids" $ids "page" .) }}
+    <p class="research-live" data-research-live hidden></p>
+  </main>
+{{ end }}

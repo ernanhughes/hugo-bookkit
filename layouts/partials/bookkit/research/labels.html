@@ -1,0 +1,39 @@
+{{/* R21: fixed display strings for research relations and states.
+
+The frontend renders relation/tier strings from the R19 dossier verbatim;
+this dict only maps them to human-readable headings. It never promotes,
+demotes, or reinterprets evidence (R21.1). */}}
+{{- $relationHeadings := dict
+  "SUPPORTS" "Supports"
+  "EXTENDS" "Extends"
+  "QUALIFIES" "Qualifies"
+  "CONTRADICTS" "Contradicts"
+  "ALTERNATIVE" "Alternatives"
+  "BACKGROUND" "Background"
+  "METHOD" "Methods"
+  "EMPIRICAL_EVIDENCE" "Empirical evidence"
+  "LIMITATION" "Limitations"
+  "SUPERSEDES" "Supersedes"
+  "UNCERTAIN" "Unresolved"
+-}}
+{{- $groupOrder := slice "supporting" "qualifying" "competing" "contradictory" "background" "unresolved" -}}
+{{- $groupHeadings := dict
+  "supporting" "Supporting evidence"
+  "qualifying" "Qualifying evidence"
+  "competing" "Competing approaches"
+  "contradictory" "Contradictory evidence"
+  "background" "Background"
+  "unresolved" "Unresolved"
+-}}
+{{- $stateLabels := dict
+  "CURRENT" "Current"
+  "STALE" "Update available"
+  "NEVER_RESEARCHED" "Not yet researched"
+  "FAILED_LATEST" "Refresh incomplete"
+-}}
+{{- return dict
+  "relationHeadings" $relationHeadings
+  "groupOrder" $groupOrder
+  "groupHeadings" $groupHeadings
+  "stateLabels" $stateLabels
+-}}

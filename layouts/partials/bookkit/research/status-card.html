@@ -1,0 +1,61 @@
+{{/* Bookkit Research: compact research status card for a chapter page.
+
+Input: dict {"page": Page, "ids": dict, "dossier": dict}.
+Renders status, last-researched date, counts, and a link to the research
+page. Compact by design: the full dossier lives on the research page.
+No research logic: counts come straight from dossier.summary. */}}
+{{- $dossier := .dossier -}}
+{{- $labels := partial "bookkit/research/labels.html" . -}}
+{{- $research := $dossier.research -}}
+{{- $summary := $dossier.summary -}}
+{{- $state := $research.state | default "NEVER_RESEARCHED" -}}
+{{- $stateLabel := index $labels.stateLabels $state | default $state -}}
+{{- $cfg := partial "bookkit/research/config.html" .page -}}
+<section class="research-card" aria-label="Chapter research status"
+  data-research-card
+  data-research-book="{{ .ids.book }}"
+  data-research-chapter="{{ .ids.chapter }}"
+  data-research-state="{{ $state }}"
+  data-research-run="{{ $research.run_id }}"
+  {{- with $cfg.apiBase }} data-api-base="{{ . }}"{{ end -}}>
+  <h2 class="research-card__title">Research</h2>
+  {{- if eq $state "CURRENT" -}}
+  <p class="research-card__status">
+    <span class="research-badge" data-research-state-text>{{ $stateLabel }}</span>
+    {{- with $research.last_researched }}
+      <span class="research-card__date">Last researched
+        <time datetime="{{ . }}">{{ time.Format "2 Jan 2006" . }}</time></span>
+    {{- end }}
+  </p>
+  <p class="research-card__counts" data-research-counts>
+    {{ $summary.sources }} {{ if eq $summary.sources 1 }}source{{ else }}sources{{ end }} ·
+    {{ $summary.evidence_relations }} evidence relationships ·
+    {{ $summary.open_gaps }} {{ if eq $summary.open_gaps 1 }}open gap{{ else }}open gaps{{ end }}
+  </p>
+  {{- else if eq $state "STALE" -}}
+  <p class="research-card__status">
+    <span class="research-badge" data-research-state-text>{{ $stateLabel }}</span>
+  </p>
+  <p class="research-card__notice">This research predates changes to this chapter. Research may need revalidation.</p>
+  <p class="research-card__counts" data-research-counts>
+    {{ $summary.sources }} {{ if eq $summary.sources 1 }}source{{ else }}sources{{ end }} ·
+    {{ $summary.evidence_relations }} evidence relationships
+  </p>
+  {{- else if eq $state "FAILED_LATEST" -}}
+  <p class="research-card__status">
+    <span class="research-badge" data-research-state-text>{{ $stateLabel }}</span>
+  </p>
+  <p class="research-card__notice">The latest research refresh did not complete. Showing the most recent successful research.</p>
+  {{- else -}}
+  <p class="research-card__status">
+    <span class="research-badge" data-research-state-text>{{ $stateLabel }}</span>
+  </p>
+  <p class="research-card__notice">This chapter has not yet been researched.</p>
+  {{- end -}}
+  {{- with .page.OutputFormats.Get "Research" }}
+  <p class="research-card__links">
+    <a class="research-card__link" href="{{ .RelPermalink }}">View research</a>
+  </p>
+  {{- end }}
+  <p class="research-card__live" data-research-live hidden></p>
+</section>

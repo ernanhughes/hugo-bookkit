@@ -1,0 +1,233 @@
+/* Bookkit Research (R21B): reader-facing research UI. Neutral by design: relation and tier
+are text labels, never color-coded truth signals. Works without
+JavaScript (native details/summary, server-rendered content). */
+
+.research-card {
+  margin: 2rem 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 8px;
+  background: var(--bookkit-card);
+}
+
+.research-card__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.research-card__status,
+.research-card__counts,
+.research-card__notice {
+  margin: 0.4rem 0;
+  color: var(--bookkit-muted);
+}
+
+.research-card__counts {
+  font-size: 0.95rem;
+}
+
+.research-badge {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--bookkit-text);
+  background: var(--bookkit-surface);
+}
+
+.research-card__date {
+  margin-left: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.research-card__link {
+  font-weight: 600;
+}
+
+.research-card__live {
+  font-size: 0.85rem;
+  color: var(--bookkit-muted);
+}
+
+.research-page {
+  max-width: var(--bookkit-content-width);
+}
+
+.research-page__title {
+  margin-bottom: 0.5rem;
+}
+
+.research-back {
+  margin: 0 0 1rem;
+}
+
+.research-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 1rem 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.research-overview__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 0.75rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.research-notice {
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--bookkit-border);
+  background: var(--bookkit-surface);
+}
+
+.research-evidence-group h2,
+.research-gaps h2,
+.research-sources h2,
+.research-thesis h2 {
+  margin-top: 2rem;
+}
+
+.research-evidence {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 6px;
+  background: var(--bookkit-card);
+}
+
+.research-evidence__relation {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.research-evidence__tier {
+  margin: 0.15rem 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--bookkit-muted);
+}
+
+.research-evidence__field {
+  font-weight: 600;
+}
+
+.research-evidence p {
+  margin: 0.35rem 0;
+}
+
+.research-collapse {
+  margin: 1rem 0;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 6px;
+  background: var(--bookkit-card);
+}
+
+.research-collapse > summary {
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.research-collapse .research-evidence {
+  margin: 1rem 1.25rem;
+}
+
+.research-source {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 6px;
+  background: var(--bookkit-card);
+}
+
+.research-source__title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.research-source__meta,
+.research-source__ids,
+.research-source__provenance {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--bookkit-muted);
+}
+
+.research-id {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.research-thesis__concepts {
+  font-size: 0.9rem;
+  color: var(--bookkit-muted);
+}
+
+.research-experiment,
+.research-addition {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 6px;
+}
+
+.research-provenance {
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: var(--bookkit-muted);
+}
+
+.research-provenance code {
+  font-size: 0.8rem;
+}
+
+.research-refresh {
+  margin-top: 1.5rem;
+}
+
+.research-refresh__button {
+  cursor: pointer;
+}
+
+.research-refresh__button[disabled] {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.research-refresh__status {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .research-card {
+    padding: 1rem;
+  }
+
+  .research-evidence,
+  .research-source {
+    padding: 0.75rem;
+  }
+}

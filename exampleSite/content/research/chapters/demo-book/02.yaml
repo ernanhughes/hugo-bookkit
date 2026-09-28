@@ -1,0 +1,58 @@
+schema: programmer.research.chapter.v1
+generator: writer-publication-r19.1
+book:
+  id: demo-book
+  title: A Small BookKit Book
+chapter:
+  id: "02"
+  title: Reuse Without Copying
+  slug: 02-reuse
+  public_path: /books/demo-book/02-reuse/
+research:
+  state: NEVER_RESEARCHED
+  run_id: null
+  previous_run_id: null
+  last_researched: null
+  execution_kind: null
+summary:
+  sources: 0
+  evidence_relations: 0
+  supporting: 0
+  qualifying: 0
+  contradictory: 0
+  background: 0
+  limitations: 0
+  open_gaps: 0
+delta: null
+sections:
+  current_thesis: []
+  existing_evidence:
+    supporting: []
+    qualifying: []
+    competing: []
+    contradictory: []
+    background: []
+    unresolved: []
+  new_literature: []
+  missing_evidence: []
+  limitations: []
+  experiment_opportunities: []
+  bibliography_additions: []
+  recommended_actions: []
+sources: []
+missing_evidence: []
+negative_findings: []
+status_card:
+  state: NEVER_RESEARCHED
+  sources: 0
+  evidence_relations: 0
+  open_gaps: 0
+  last_researched: null
+  run_id: null
+actions:
+  research_available: false
+provenance:
+  run_id: null
+  previous_run_id: null
+  research_schema: null
+  publication_schema: programmer.research.chapter.v1

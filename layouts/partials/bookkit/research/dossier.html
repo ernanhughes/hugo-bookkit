@@ -1,0 +1,24 @@
+{{/* Bookkit Research: load the R19 dossier for a chapter at build time.
+
+Input: dict {"page": Page, "book": ..., "chapter": ...}. The data root
+comes from Bookkit research configuration (default
+"content/research/chapters"), so consuming sites only supply files.
+Returns: dict {"dossier": dict|nil, "expected": bool}. "expected" is
+true when the research programme manifest for the book exists but this
+chapter dossier is absent; the caller warns only when configured to
+(warnMissingDossier, default false). Missing dossiers never break
+chapter rendering and nothing is fabricated. */}}
+{{- $found := dict -}}
+{{- $expected := false -}}
+{{- $cfg := partial "bookkit/research/config.html" .page -}}
+{{- $path := printf "%s/%s/%s.yaml" $cfg.dataRoot .book .chapter -}}
+{{- if fileExists $path -}}
+  {{- with readFile $path -}}
+    {{- with transform.Unmarshal . -}}
+      {{- $found = . -}}
+    {{- end -}}
+  {{- end -}}
+{{- else -}}
+  {{- $expected = true -}}
+{{- end -}}
+{{- return dict "dossier" $found "expected" $expected -}}

@@ -1,0 +1,183 @@
+{{/* R21: full research dossier body. Input: dict {"dossier": ..., "ids": ...}.
+Renders every dossier section present; skips absent/empty sections
+rather than showing zero-count placeholders (R21.28). Relation and
+tier strings pass through verbatim (R21.1). */}}
+{{- $dossier := .dossier -}}
+{{- $labels := partial "bookkit/research/labels.html" . -}}
+{{- $research := $dossier.research -}}
+{{- $summary := $dossier.summary -}}
+{{- $sections := $dossier.sections -}}
+{{- $state := $research.state | default "NEVER_RESEARCHED" -}}
+{{- $stateLabel := index $labels.stateLabels $state | default $state -}}
+
+<nav class="research-nav" aria-label="Research sections">
+  <ul>
+    <li><a href="#research-overview">Overview</a></li>
+    {{- $evidence := $sections.existing_evidence -}}
+    {{- range $group := $labels.groupOrder -}}
+      {{- if index $evidence $group }}<li><a href="#research-{{ $group }}">{{ index $labels.groupHeadings $group }}</a></li>{{ end -}}
+    {{- end -}}
+    {{- if or $sections.missing_evidence $sections.limitations }}<li><a href="#research-gaps">Gaps</a></li>{{ end -}}
+    {{- if $dossier.sources }}<li><a href="#research-sources">Sources</a></li>{{ end -}}
+    {{- if $dossier.delta }}<li><a href="#research-changes">Changes</a></li>{{ end -}}
+  </ul>
+</nav>
+
+<section class="research-overview" id="research-overview" aria-label="Research overview">
+  <p class="research-overview__state">
+    <span class="research-badge">{{ $stateLabel }}</span>
+    {{- with $research.last_researched }}
+      <span>Last researched <time datetime="{{ . }}">{{ time.Format "2 Jan 2006" . }}</time></span>
+    {{- end }}
+  </p>
+  {{- if eq $state "STALE" }}
+  <p class="research-notice" role="note">This research was produced for an earlier version of the chapter. The evidence below remains the latest successful research record, but some relationships may require revalidation.</p>
+    {{- with $research.stale_reasons }}
+  <p class="research-stale-reasons">Changed: {{ delimit . ", " }}</p>
+    {{- end }}
+  {{- end }}
+  {{- if eq $state "FAILED_LATEST" }}
+  <p class="research-notice" role="note">The latest refresh did not complete. This page shows the most recent successful research.</p>
+  {{- end }}
+  {{- if eq $state "NEVER_RESEARCHED" }}
+  <p class="research-notice" role="note">This chapter has not yet been researched.</p>
+  {{- end }}
+  {{- if ne $state "NEVER_RESEARCHED" }}
+  <ul class="research-overview__counts">
+    <li>{{ $summary.sources }} {{ if eq $summary.sources 1 }}source{{ else }}sources{{ end }}</li>
+    <li>{{ $summary.evidence_relations }} evidence relationships</li>
+    <li>{{ $summary.open_gaps }} {{ if eq $summary.open_gaps 1 }}open gap{{ else }}open gaps{{ end }}</li>
+  </ul>
+  {{- end }}
+</section>
+
+{{- with $sections.current_thesis }}
+<section class="research-thesis" aria-label="Current thesis">
+  <h2>Current thesis</h2>
+  {{- range . }}
+  <div class="research-thesis__block">
+    {{- with .section }}<h3>{{ . }}</h3>{{ end -}}
+    {{- with .claims }}
+    <ul>{{- range . }}<li>{{ . }}</li>{{ end -}}</ul>
+    {{- end -}}
+    {{- with .concepts }}
+    <p class="research-thesis__concepts">Concepts: {{ delimit . ", " }}</p>
+    {{- end }}
+  </div>
+  {{- end }}
+</section>
+{{- end }}
+
+{{- $evidence := $sections.existing_evidence -}}
+{{- range $group := $labels.groupOrder -}}
+  {{- $items := index $evidence $group -}}
+  {{- if $items }}
+<section class="research-evidence-group" id="research-{{ $group }}" aria-label="{{ index $labels.groupHeadings $group }}">
+  <h2>{{ index $labels.groupHeadings $group }} ({{ len $items }})</h2>
+    {{- if and (eq $group "background") (gt (len $items) 5) }}
+  <details class="research-collapse">
+    <summary>Show {{ len $items }} background items</summary>
+    {{- range $items }}{{ partial "bookkit/research/evidence-card.html" (dict "item" .) }}{{ end -}}
+  </details>
+    {{- else }}
+  {{- range $items }}{{ partial "bookkit/research/evidence-card.html" (dict "item" .) }}{{ end -}}
+    {{- end }}
+</section>
+  {{- end -}}
+{{- end }}
+
+{{- if or $sections.missing_evidence $sections.limitations $dossier.negative_findings }}
+<section class="research-gaps" id="research-gaps" aria-label="Gaps and limitations">
+  <h2>Gaps</h2>
+  {{- with $sections.missing_evidence }}
+  <h3>Evidence gaps</h3>
+  <ul>{{- range . }}<li>{{ .claim }}{{ with .gap }} — {{ . }}{{ end }}</li>{{ end -}}</ul>
+  {{- end }}
+  {{- with $sections.limitations }}
+  <h3>Known limitations</h3>
+  <ul>{{- range . }}<li>{{ . }}</li>{{ end -}}</ul>
+  {{- end }}
+  {{- with $dossier.negative_findings }}
+  <h3>Sources reviewed but not used as evidence</h3>
+  <ul>{{- range . }}<li>{{ .paper.title | default .paper.id }}{{ with .finding }} — {{ . }}{{ end }}</li>{{ end -}}</ul>
+  {{- end }}
+</section>
+{{- end }}
+
+{{- with $sections.new_literature }}
+<section class="research-new" aria-label="Newly discovered literature">
+  <h2>New literature</h2>
+  <ul>{{- range . }}<li>{{ .title }}{{ with .year }} ({{ . }}){{ end }}</li>{{ end -}}</ul>
+</section>
+{{- end }}
+
+{{- with $sections.experiment_opportunities }}
+<section class="research-experiments" aria-label="Experiment opportunities">
+  <h2>Open experiment opportunities</h2>
+  {{- range . }}
+  <div class="research-experiment">
+    <p><span class="research-badge">Proposed experiment</span></p>
+    <p>{{ .description }}</p>
+    {{- with .reason }}<p>{{ . }}</p>{{ end -}}
+  </div>
+  {{- end }}
+</section>
+{{- end }}
+
+{{- with $dossier.sources }}
+<section class="research-sources" id="research-sources" aria-label="Sources">
+  <h2>Sources ({{ len . }})</h2>
+  {{- range . }}{{ partial "bookkit/research/source-card.html" . }}{{ end -}}
+</section>
+{{- end }}
+
+{{- with $sections.bibliography_additions }}
+<section class="research-additions" aria-label="Potential bibliography additions">
+  <h2>Potential bibliography additions</h2>
+  {{- range . }}
+  <div class="research-addition">
+    <p><strong>{{ .title }}</strong>{{ with .year }} ({{ . }}){{ end }} <span class="research-badge">{{ .status | default "PROPOSED" }}</span></p>
+    {{- with .reason }}<p>{{ . }}</p>{{ end -}}
+  </div>
+  {{- end }}
+</section>
+{{- end }}
+
+{{- with $sections.recommended_actions }}
+<section class="research-recommendations" aria-label="Research recommendations">
+  <h2>Research recommendations</h2>
+  <ul>{{- range . }}<li>{{ .recommendation }}</li>{{ end -}}</ul>
+</section>
+{{- end }}
+
+{{- with $sections.do_not_strengthen }}
+<section class="research-caution" aria-label="Claims that should remain cautious">
+  <h2>Claims that should remain cautious</h2>
+  <ul>{{- range . }}<li>{{ . }}</li>{{ end -}}</ul>
+</section>
+{{- end }}
+
+{{- with $dossier.delta }}
+<section class="research-changes" id="research-changes" aria-label="What changed">
+  <h2>What changed in this research pass</h2>
+  <ul>
+    <li>{{ .relations_reused }} evidence relationships remained valid</li>
+    <li>{{ .relations_revalidated }} re-evaluated</li>
+    {{- with .relations_removed }}<li>{{ . }} removed</li>{{ end -}}
+    {{- with .papers_new }}<li>{{ . }} new {{ if eq . 1 }}paper{{ else }}papers{{ end }} evaluated</li>{{ else }}<li>no new papers were required</li>{{ end -}}
+    {{- if or .claims_added .claims_changed .claims_removed }}
+    <li>{{ .claims_changed }} chapter {{ if eq .claims_changed 1 }}claim{{ else }}claims{{ end }} changed{{ with .claims_added }}, {{ . }} added{{ end }}{{ with .claims_removed }}, {{ . }} removed{{ end }}</li>
+    {{- end }}
+  </ul>
+  <p class="research-changes__note">Unchanged evidence is reused between research passes. Changed claims are re-evaluated selectively.</p>
+</section>
+{{- end }}
+
+<details class="research-provenance">
+  <summary>Research run details</summary>
+  <dl>
+    <dt>Run</dt><dd><code>{{ $dossier.provenance.run_id }}</code></dd>
+    {{- with $dossier.provenance.previous_run_id }}<dt>Previous run</dt><dd><code>{{ . }}</code></dd>{{ end -}}
+    {{- with $research.last_researched }}<dt>Last researched</dt><dd><time datetime="{{ . }}">{{ time.Format "2 Jan 2006" . }}</time></dd>{{ end -}}
+  </dl>
+</details>

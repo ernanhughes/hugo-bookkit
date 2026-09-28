@@ -1,0 +1,6 @@
+{{/* Bookkit Research: stylesheet link. Emitted only when the research
+feature is enabled. Consuming sites with their own base layout include
+this partial in <head>; Bookkit's own base layout includes it too. */}}
+{{- if .Site.Params.bookkit.features.research }}
+<link rel="stylesheet" href="{{ "css/bookkit-research.css" | relURL }}">
+{{- end }}

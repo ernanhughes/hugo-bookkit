@@ -1,0 +1,27 @@
+{{/* R21: one deduplicated source card. Input: the dossier source item.
+Fields come straight from the R19 dossier; provenance paths are shown
+as plain text badges. URLs are scheme-checked. */}}
+<article class="research-source" id="source-{{ .id | urlize }}">
+  <h3 class="research-source__title">{{ .title | default .id }}</h3>
+  <p class="research-source__meta">
+    {{- $authors := .authors -}}
+    {{- if $authors }}{{ delimit (first 4 $authors) ", " }}{{ if gt (len $authors) 4 }} et al.{{ end }}{{ end -}}
+    {{- with .year }} · {{ . }}{{ end -}}
+    {{- with .venue }} · {{ . }}{{ end -}}
+    {{- with .status }} · {{ . }}{{ end -}}
+  </p>
+  {{- with .identifiers }}
+  <p class="research-source__ids">
+    {{- with .arxiv }}<span class="research-id">arXiv:{{ . }}</span>{{ end -}}
+    {{- with .doi }} <span class="research-id">DOI:{{ . }}</span>{{ end -}}
+  </p>
+  {{- end }}
+  {{- with .url }}
+    {{- if hasPrefix . "http" }}
+  <p class="research-source__link"><a href="{{ . }}" rel="noopener" target="_blank">Source link<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (external)</span></a></p>
+    {{- end }}
+  {{- end }}
+  {{- with .provenance }}
+  <p class="research-source__provenance">{{ delimit . " · " }}</p>
+  {{- end }}
+</article>

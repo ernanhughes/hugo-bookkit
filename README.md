@@ -89,7 +89,75 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
   [params.bookkit.features]
     math = true
     mermaid = true
+    research = true
+
+  [params.bookkit.research]
+    dataRoot = "content/research/chapters"
+    apiBase = ""
+    refreshUI = false
+    warnMissingDossier = false
 ```
+
+## Research reader support
+
+BookKit can render reader-facing research dossiers for book chapters.
+Research **data** comes from the consuming site (for example, Writer's
+R19 `PublicResearchDossier` projection); BookKit owns **presentation**
+only and never interprets evidence.
+
+### Enable Research
+
+```toml
+[params.bookkit.features]
+  research = true
+
+[params.bookkit.research]
+  dataRoot = "content/research/chapters"
+  refreshUI = false
+  apiBase = ""
+```
+
+Because Hugo modules cannot ship output-format declarations, the
+consuming site also declares the Research output once:
+
+```toml
+[outputFormats.Research]
+  mediaType = "text/html"
+  baseName = "research"
+  isHTML = true
+  permalinkable = true
+```
+
+and adds it to chapter pages, typically via cascade in the books
+section:
+
+```toml
+[cascade]
+  outputs = ['HTML', 'Research']
+  [cascade.target]
+    kind = 'page'
+```
+
+### Dossier contract
+
+BookKit reads `programmer.research.chapter.v1` dossiers from
+`<dataRoot>/<book>/<chapter>.yaml` and renders the chapter status card
+plus a `<chapter>/research.html` page with states `CURRENT`, `STALE`,
+`NEVER_RESEARCHED`, and `FAILED_LATEST`, evidence grouped by relation,
+tiers shown verbatim, and sources deduplicated by canonical paper ID.
+
+### Static-first behavior
+
+Research pages render fully at build time with no JavaScript and no
+live API. When `apiBase` is configured, a small enhancement script may
+refresh the status card text; when `refreshUI` is additionally true, a
+trusted `mode=auto` refresh button appears.
+
+### Security warning
+
+Do not enable browser refresh against an unprotected public Research
+API. `refreshUI` defaults to `false`; enabling it also requires
+`apiBase`, otherwise the build warns and renders no control.
 
 ### Standalone single-book homepage
 

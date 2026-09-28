@@ -1,0 +1,17 @@
+{{/* Bookkit Research: normalized feature configuration.
+
+Input: the current Page.
+Returns: dict with keys enabled, dataRoot, apiBase, refreshUI,
+warnMissingDossier, bookSection. All values deterministic; safe
+defaults (view-only static research) unless the site opts in. */}}
+{{- $params := .Site.Params.bookkit -}}
+{{- $features := $params.features -}}
+{{- $research := $params.research -}}
+{{- return dict
+  "enabled" ($features.research | default false)
+  "dataRoot" ($research.dataRoot | default "content/research/chapters")
+  "apiBase" ($research.apiBase | default "")
+  "refreshUI" ($research.refreshUI | default false)
+  "warnMissingDossier" ($research.warnMissingDossier | default false)
+  "bookSection" ($params.bookSection | default "books")
+-}}

@@ -1,0 +1,16 @@
+{{/* Bookkit Research: searchable text for a chapter dossier.
+
+Input: dict {"page": Page, "book": ..., "chapter": ...}.
+Returns: a space-joined string of source titles and evidence claims
+(capped), or "" when no dossier exists. Consuming-site search calls
+this helper instead of duplicating dossier parsing or research
+semantics. */}}
+{{- $text := slice -}}
+{{- $loaded := partial "bookkit/research/dossier.html" (dict "page" .page "book" .book "chapter" .chapter) -}}
+{{- with $loaded.dossier -}}
+  {{- range first 40 .sources }}{{ $text = $text | append .title }}{{ end -}}
+  {{- range $group, $items := .sections.existing_evidence -}}
+    {{- range first 10 $items }}{{ $text = $text | append .claim }}{{ end -}}
+  {{- end -}}
+{{- end -}}
+{{- delimit $text " " -}}

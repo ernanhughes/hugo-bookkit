@@ -3,6 +3,14 @@ locale = "en-US"
 title = "BookKit Example"
 disableKinds = ["taxonomy", "term", "rss"]
 
+# BookKit cannot ship output formats through module configuration: the
+# consuming site declares the Research output once (canonical snippet).
+[outputFormats.Research]
+  mediaType = "text/html"
+  baseName = "research"
+  isHTML = true
+  permalinkable = true
+
 [module]
   [[module.imports]]
     path = "github.com/ernanhughes/hugo-bookkit"
@@ -15,6 +23,12 @@ disableKinds = ["taxonomy", "term", "rss"]
     homeBook = "demo-book"
     accent = "#3978c5"
     storagePrefix = "bookkit-example:progress:"
+
+    [params.bookkit.features]
+      research = true
+
+    [params.bookkit.research]
+      warnMissingDossier = true
 
 [[menu.main]]
   name = "Books"

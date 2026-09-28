@@ -1,0 +1,19 @@
+{{/* Bookkit Research: trusted refresh control. Input: dict {"ids": ...,
+"page": Page}. Rendered only when the site explicitly enables it AND
+configures an API base. Public production default is off: readers get
+view-only research. If refresh is enabled without an API base, build
+warns and nothing is rendered. The button always POSTs mode=auto; full
+refresh and request parameters are never exposed. */}}
+{{- $cfg := partial "bookkit/research/config.html" .page -}}
+{{- if and $cfg.refreshUI (not $cfg.apiBase) }}
+  {{- warnf "bookkit research.refreshUI is true without bookkit research.apiBase: refresh control disabled" -}}
+{{- end -}}
+{{- if and $cfg.refreshUI $cfg.apiBase }}
+<p class="research-refresh" data-research-refresh
+  data-research-book="{{ .ids.book }}"
+  data-research-chapter="{{ .ids.chapter }}"
+  data-api-base="{{ $cfg.apiBase }}" hidden>
+  <button type="button" class="research-refresh__button" data-research-refresh-button aria-busy="false">Refresh research</button>
+  <span class="research-refresh__status" data-research-refresh-status role="status" aria-live="polite"></span>
+</p>
+{{- end }}

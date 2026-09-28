@@ -1,0 +1,15 @@
+{{/* Bookkit Research: head metadata for research outputs. Input: the
+current Page. Emits a noindex tag for state-only NEVER_RESEARCHED
+research pages; nothing otherwise. Called from head.html so it works
+regardless of which base layout the consuming site uses. */}}
+{{- $ids := partial "bookkit/research/chapter-ids.html" . -}}
+{{- $state := "" -}}
+{{- with $ids -}}
+  {{- $loaded := partial "bookkit/research/dossier.html" (dict "page" $ "book" .book "chapter" .chapter) -}}
+  {{- with $loaded.dossier -}}
+    {{- $state = .research.state -}}
+  {{- end -}}
+{{- end -}}
+{{- if eq $state "NEVER_RESEARCHED" }}
+<meta name="robots" content="noindex">
+{{- end }}

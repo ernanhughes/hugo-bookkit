@@ -1,0 +1,33 @@
+{{/* R21: one evidence relationship card. Input: the dossier evidence item.
+Renders relation + tier + claim + source + summary verbatim from the
+dossier. No strength inference, no new prose (R21.1). All fields are
+Hugo-escaped; URLs are scheme-checked (R21.83–R21.85). */}}
+{{- $labels := partial "bookkit/research/labels.html" . -}}
+{{- $item := .item -}}
+{{- $relation := $item.relation | default "UNCERTAIN" -}}
+{{- $relationLabel := index $labels.relationHeadings $relation | default $relation -}}
+<article class="research-evidence" data-relation="{{ $relation }}" data-tier="{{ $item.evidence.tier }}">
+  <p class="research-evidence__relation">{{ $relationLabel }}</p>
+  <p class="research-evidence__tier">{{ $item.evidence.tier_label | default $item.evidence.tier }}</p>
+  {{- with $item.claim }}
+  <p class="research-evidence__claim"><span class="research-evidence__field">Claim:</span> {{ . }}</p>
+  {{- end }}
+  <p class="research-evidence__source"><span class="research-evidence__field">Source:</span>
+    {{- with $item.source.title }} {{ . }}{{ end -}}
+    {{- $authors := $item.source.authors -}}
+    {{- if $authors }} {{ delimit (first 3 $authors) ", " }}{{ if gt (len $authors) 3 }} et al.{{ end }}{{ end -}}
+    {{- with $item.source.year }} · {{ . }}{{ end -}}
+    {{- with $item.source.url }}
+      {{- if hasPrefix . "http" }} <a href="{{ . }}" rel="noopener" target="_blank">Source link<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (external)</span></a>{{ end -}}
+    {{- end }}
+  </p>
+  {{- with $item.evidence.section }}
+  <p class="research-evidence__section"><span class="research-evidence__field">Evidence section:</span> {{ . }}</p>
+  {{- end }}
+  {{- with $item.evidence.summary }}
+  <p class="research-evidence__summary"><span class="research-evidence__field">Evidence:</span> {{ . }}</p>
+  {{- end }}
+  {{- with $item.interpretation.rationale }}
+  <p class="research-evidence__rationale"><span class="research-evidence__field">Why it matters:</span> {{ . }}</p>
+  {{- end }}
+</article>

@@ -22,6 +22,18 @@
   [params.bookkit.features]
     math = true
     mermaid = true
+    research = false
+
+  # R21B: reusable reader-facing research defaults. Consuming sites
+  # enable the feature and point at their R19 dossier tree; trusted API
+  # enhancement stays opt-in. (Output formats cannot ship through module
+  # configuration, so sites also declare [outputFormats.Research]; see
+  # README and exampleSite/hugo.toml.)
+  [params.bookkit.research]
+    dataRoot = "content/research/chapters"
+    apiBase = ""
+    refreshUI = false
+    warnMissingDossier = false
 
 [markup]
   [markup.goldmark]

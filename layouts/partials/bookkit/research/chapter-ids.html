@@ -1,0 +1,27 @@
+{{/* Bookkit Research: resolve (book_id, chapter_id) for a chapter page.
+
+Input: the chapter Page.
+Returns: dict {"book": ..., "chapter": ..., "stem": ...}, or an empty
+dict when the page is not a NN-<stem>.md chapter under the configured
+book section (empty dicts are falsy in {{ with }}). IDs come from the
+content path, never from the page title. No int cast: leading-zero
+stems ("09") pad by rule, so "05" stays "05", never 5. */}}
+{{- $result := dict -}}
+{{- $cfg := partial "bookkit/research/config.html" . -}}
+{{- $filePath := "" -}}
+{{- with .File -}}{{- $filePath = .Path -}}{{- end -}}
+{{- if $filePath -}}
+  {{- $dir := path.Dir $filePath -}}
+  {{- $dirParts := split (strings.TrimSuffix "/" $dir) "/" -}}
+  {{- if and (ge (len $dirParts) 2) (eq (index $dirParts 0) $cfg.bookSection) -}}
+    {{- $book := index $dirParts 1 -}}
+    {{- $stem := strings.TrimSuffix ".md" (path.Base $filePath) -}}
+    {{- $digits := replaceRE `^([0-9]+).*$` "$1" $stem -}}
+    {{- if and (findRE `^[0-9]{1,2}$` $digits) (ne $digits "0") (ne $digits "00") -}}
+      {{- $padded := $digits -}}
+      {{- if eq (len $digits) 1 -}}{{- $padded = printf "0%s" $digits -}}{{- end -}}
+      {{- $result = dict "book" $book "chapter" $padded "stem" $stem -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $result -}}

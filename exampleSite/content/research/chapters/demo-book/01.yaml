@@ -1,0 +1,123 @@
+schema: programmer.research.chapter.v1
+generator: writer-publication-r19.1
+book:
+  id: demo-book
+  title: A Small BookKit Book
+chapter:
+  id: "01"
+  title: First Principles
+  slug: 01-first-principles
+  public_path: /books/demo-book/01-first-principles/
+research:
+  state: CURRENT
+  run_id: demo-book:01:20260928T000000:abcdef123456
+  previous_run_id: null
+  last_researched: 2026-09-28T00:00:00+00:00
+  execution_kind: null
+summary:
+  sources: 2
+  evidence_relations: 2
+  supporting: 1
+  qualifying: 0
+  contradictory: 0
+  background: 1
+  limitations: 1
+  open_gaps: 1
+delta: null
+sections:
+  current_thesis:
+    - section: Reuse
+      claims:
+        - A reusable book runtime separates content from publishing behavior.
+      concepts:
+        - reuse
+        - modules
+  existing_evidence:
+    supporting:
+      - relation: SUPPORTS
+        claim: A reusable book runtime separates content from publishing behavior.
+        source:
+          id: url:example-source
+          title: Reusable Themes in Practice
+          authors:
+            - J. Doe
+          year: 2024
+          url: https://example.com/reusable-themes
+        evidence:
+          tier: ABSTRACT_EVIDENCE
+          tier_label: Abstract only
+          section: Abstract
+          summary: Theme reuse reduces duplication across sites.
+        interpretation:
+          rationale: The abstract describes reuse benefits consistent with the claim.
+    qualifying: []
+    competing: []
+    contradictory: []
+    background:
+      - relation: BACKGROUND
+        claim: Book publishing has a long module history.
+        source:
+          id: url:example-background
+          title: A Background Survey
+          authors:
+            - A. Smith
+          year: 2022
+          url: https://example.com/background-survey
+        evidence:
+          tier: SEARCH_SNIPPET
+          tier_label: Search snippet
+          section: Snippet
+          summary: Survey context for static site publishing.
+        interpretation:
+          rationale: Context only.
+    unresolved: []
+  new_literature: []
+  missing_evidence:
+    - claim: Module setup cost is negligible.
+      gap: No empirical evaluation identified.
+  limitations:
+    - Example fixture limitation.
+  experiment_opportunities: []
+  bibliography_additions: []
+  recommended_actions: []
+sources:
+  - id: url:example-background
+    title: A Background Survey
+    authors:
+      - A. Smith
+    year: 2022
+    venue: null
+    status: null
+    url: https://example.com/background-survey
+    identifiers: {}
+    provenance:
+      - arxiv_search
+  - id: url:example-source
+    title: Reusable Themes in Practice
+    authors:
+      - J. Doe
+    year: 2024
+    venue: null
+    status: null
+    url: https://example.com/reusable-themes
+    identifiers: {}
+    provenance:
+      - project_bibliography
+missing_evidence:
+  - claim: Module setup cost is negligible.
+    gap: No empirical evaluation identified.
+negative_findings: []
+status_card:
+  state: CURRENT
+  sources: 2
+  evidence_relations: 2
+  open_gaps: 1
+  last_researched: 2026-09-28T00:00:00+00:00
+  run_id: demo-book:01:20260928T000000:abcdef123456
+actions:
+  research_available: true
+provenance:
+  run_id: demo-book:01:20260928T000000:abcdef123456
+  previous_run_id: null
+  research_schema: writer.research.analysis.v1
+  publication_schema: programmer.research.chapter.v1

@@ -20,6 +20,7 @@
   {{- if $cfg.reader }}
     <script src="{{ "js/book-reader.js" | relURL }}" defer></script>
   {{- end }}
+  {{ partial "bookkit/research/body-assets.html" . }}
   {{- range $cfg.customJS }}
     <script src="{{ . | relURL }}" defer></script>
   {{- end }}

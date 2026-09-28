@@ -10,7 +10,12 @@
 {{ template "_internal/opengraph.html" . }}
 {{ template "_internal/twitter_cards.html" . }}
 
+{{ partial "bookkit/research/head-meta.html" . }}
+
+{{ block "bookkit_head_extra" . }}{{ end }}
+
 <link rel="stylesheet" href="{{ "css/bookkit.css" | relURL }}">
+{{ partial "bookkit/research/head-assets.html" . }}
 {{- range .Site.Params.bookkit.customCSS }}
 <link rel="stylesheet" href="{{ . | relURL }}">
 {{- end }}

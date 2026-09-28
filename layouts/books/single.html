@@ -21,6 +21,21 @@
       {{ .Content }}
     </div>
 
+    {{- if .Site.Params.bookkit.features.research }}
+      {{- $researchIds := partial "bookkit/research/chapter-ids.html" . -}}
+      {{- with $researchIds }}
+        {{- $researchLoad := partial "bookkit/research/dossier.html" (dict "page" $ "book" .book "chapter" .chapter) -}}
+        {{- with $researchLoad.dossier }}
+          {{ partial "bookkit/research/status-card.html" (dict "page" $ "ids" $researchIds "dossier" .) }}
+        {{- else }}
+          {{- $researchCfg := partial "bookkit/research/config.html" $ -}}
+          {{- if and $researchLoad.expected $researchCfg.warnMissingDossier }}
+            {{- warnf "research dossier missing for book %s chapter %s (page %s)" $researchIds.book $researchIds.chapter $.RelPermalink }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+
     {{- with $book }}
       {{ partial "bookkit/prev-next.html" (dict "book" . "current" $) }}
     {{- end }}

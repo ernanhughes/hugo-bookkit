@@ -1,0 +1,9 @@
+{{/* Bookkit Research: enhancement script. Emitted only when research
+is enabled AND the trusted refresh triple gate holds (feature flag +
+refreshUI + apiBase). Public static reading never needs JavaScript.
+Consuming sites with their own base layout include this partial before
+</body>; Bookkit's own base layout includes it too. */}}
+{{- $cfg := .Site.Params.bookkit -}}
+{{- if and $cfg.features.research $cfg.research.refreshUI $cfg.research.apiBase }}
+<script src="{{ "js/bookkit-research.js" | relURL }}" defer></script>
+{{- end }}
