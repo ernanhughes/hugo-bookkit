@@ -4,10 +4,12 @@ Input: dict {"page": Page, "book": ..., "chapter": ...}. The data root
 comes from Bookkit research configuration (default
 "content/research/chapters"), so consuming sites only supply files.
 Returns: dict {"dossier": dict|nil, "expected": bool}. "expected" is
-true when the research programme manifest for the book exists but this
-chapter dossier is absent; the caller warns only when configured to
-(warnMissingDossier, default false). Missing dossiers never break
-chapter rendering and nothing is fabricated. */}}
+true only when the book's dossier directory already holds dossiers but
+this chapter file is absent (research in progress for this book with a
+gap). Books with no dossiers at all stay quiet: absence there means
+"not in the programme", not "publishing defect". The caller warns only
+when configured to (warnMissingDossier, default false). Missing
+dossiers never break chapter rendering and nothing is fabricated. */}}
 {{- $found := dict -}}
 {{- $expected := false -}}
 {{- $cfg := partial "bookkit/research/config.html" .page -}}
@@ -19,6 +21,13 @@ chapter rendering and nothing is fabricated. */}}
     {{- end -}}
   {{- end -}}
 {{- else -}}
-  {{- $expected = true -}}
+  {{- $bookDir := printf "%s/%s" $cfg.dataRoot .book -}}
+  {{- if fileExists $bookDir -}}
+    {{- range readDir $bookDir -}}
+      {{- if strings.HasSuffix .Name ".yaml" -}}
+        {{- $expected = true -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
 {{- end -}}
 {{- return dict "dossier" $found "expected" $expected -}}
