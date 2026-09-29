@@ -100,6 +100,18 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
 
 ## Research reader support
 
+## Canonical publication host
+
+Mirrored libraries can declare a canonical publication host without changing
+reader navigation. Only pages below the configured book section are rewritten;
+ordinary site pages remain self-canonical:
+
+```toml
+[params.books]
+  canonicalBase = "https://programmer.ie"
+  isCanonicalHost = false
+```
+
 BookKit can render reader-facing research dossiers for book chapters.
 Research **data** comes from the consuming site (for example, Writer's
 R19 `PublicResearchDossier` projection); BookKit owns **presentation**

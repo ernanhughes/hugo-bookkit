@@ -1,0 +1,9 @@
+{{- $canonical := .Permalink -}}
+{{- $books := index .Site.Params "books" -}}
+{{- $canonicalBase := index $books "canonicalbase" -}}
+{{- $bookSection := .Site.Params.bookkit.bookSection | default "books" -}}
+{{- $bookPrefix := printf "/%s/" (strings.Trim $bookSection "/") -}}
+{{- if and $canonicalBase (hasPrefix .RelPermalink $bookPrefix) -}}
+  {{- $canonical = printf "%s%s" (strings.TrimSuffix "/" $canonicalBase) .RelPermalink -}}
+{{- end -}}
+<link rel="canonical" href="{{ $canonical }}">
