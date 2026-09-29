@@ -12,6 +12,7 @@
   accent = "#3978c5"
   contentWidth = "760px"
   coverRoot = "/images/books"
+  coverSourceRoot = "static/images/books"
   storagePrefix = "hugo-bookkit:progress:"
   showStatus = true
   showStores = true

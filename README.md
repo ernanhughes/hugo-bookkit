@@ -79,6 +79,9 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
   progress = true
   accent = "#3978c5"
   coverRoot = "/images/books"
+  # Optional physical source used to test cover existence when static files
+  # are materialized outside the normal static directory.
+  coverSourceRoot = "static/images/books"
   storagePrefix = "hugo-bookkit:progress:"
   showStatus = true
   showStores = true

@@ -10,8 +10,10 @@
     {{- $bookSlug := path.Base (strings.TrimSuffix "/" $book.RelPermalink) -}}
     {{- $root := $book.Site.Params.bookkit.coverRoot | default "/images/books" -}}
     {{- $root = strings.TrimSuffix "/" $root -}}
+    {{- $sourceRoot := $book.Site.Params.bookkit.coverSourceRoot | default "static/images/books" -}}
+    {{- $sourceRoot = strings.TrimSuffix "/" $sourceRoot -}}
     {{- $candidateURL := printf "%s/%s/cover.png" $root $bookSlug -}}
-    {{- $candidateFile := printf "static%s" $candidateURL -}}
+    {{- $candidateFile := printf "%s/%s/cover.png" $sourceRoot $bookSlug -}}
     {{- if fileExists $candidateFile -}}
       {{- $coverURL = $candidateURL -}}
     {{- end -}}
