@@ -14,7 +14,7 @@
     {{- end }}
 
     {{- with .Site.Params.bookkit.chapterBeforeContentPartial }}
-      {{ partial . $ }}
+      {{- if templates.Exists (print "partials/" .) }}{{ partial . $ }}{{ end }}
     {{- end }}
 
     <div class="bookkit-prose">

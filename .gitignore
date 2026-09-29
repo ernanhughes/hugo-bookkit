@@ -1,0 +1,6 @@
+/public
+exampleSite/public
+exampleSite/.hugo_build.lock
+exampleSite/resources
+resources
+.hugo_build.lock

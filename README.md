@@ -103,6 +103,43 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
 
 ## Research reader support
 
+## Book catalogue card
+
+Sites that want the catalogue without copying markup can render each book
+through the reusable card. It is site-neutral: covers, status, formats and
+store links come from book metadata, and any consumer-specific relation
+(solutions, tools, courses) passes through the generic relation slot:
+
+```gohtml
+{{ range .Sections.ByWeight }}
+  {{ partial "bookkit/book-card.html" (dict
+      "book" .
+      "size" "card"
+      "relationURL" .Params.solution_url
+      "relationTitle" .Params.solution_title
+  ) }}
+{{ end }}
+```
+
+Card presentation lives in BookKit CSS (`bookkit-book-card*` classes driven
+by `--bookkit-*` variables), so consumers brand it without forking markup.
+Per-call flags `showStatus`, `showStores` and `showFormats` fall back to
+`[params.bookkit]` of the same names.
+
+## Optional content hooks
+
+Consumers can inject site-specific blocks without forking templates:
+
+```toml
+[params.bookkit]
+  bookExtraPartial = "my-book-extra.html"
+  chapterBeforeContentPartial = "my-chapter-lead.html"
+```
+
+Missing hook partials are silently skipped no-ops: a configured name with
+no matching `layouts/partials/<name>.html` never fails the build. The
+example site pins nonexistent hook names so CI proves this on every build.
+
 ## Canonical publication host
 
 Mirrored libraries can declare a canonical publication host without changing

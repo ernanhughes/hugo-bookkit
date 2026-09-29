@@ -23,6 +23,10 @@ disableKinds = ["taxonomy", "term", "rss"]
     homeBook = "demo-book"
     accent = "#3978c5"
     storagePrefix = "bookkit-example:progress:"
+    # Compatibility fixture: these partials do not exist. The build must
+    # succeed and silently skip them (missing hooks are no-ops, never errors).
+    bookExtraPartial = "fixture-missing-extra.html"
+    chapterBeforeContentPartial = "fixture-missing-before.html"
 
     [params.bookkit.features]
       research = true

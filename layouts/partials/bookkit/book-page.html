@@ -24,7 +24,7 @@
       {{- end }}
 
       {{- with $book.Site.Params.bookkit.bookExtraPartial }}
-        {{ partial . $book }}
+        {{- if templates.Exists (print "partials/" .) }}{{ partial . $book }}{{ end }}
       {{- end }}
 
       {{- if and (not $cover) $book.Site.Params.bookkit.showStores }}

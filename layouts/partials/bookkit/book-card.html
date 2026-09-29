@@ -1,0 +1,57 @@
+{{/* Bookkit reusable book catalogue card.
+   Site-neutral: no consumer vocabulary. Relations render through the
+   generic relationURL/relationTitle slot.
+   Input (dict):
+     book          Page   the book section page (required)
+     size          string cover size for bookkit/book-cover.html (default "card")
+     showStatus    bool   default .Site.Params.bookkit.showStatus (default true)
+     showStores    bool   default .Site.Params.bookkit.showStores (default true)
+     showFormats   bool   default true
+     relationURL   string optional generic relation link
+     relationTitle string optional generic relation link text
+*/}}
+{{- $book := .book -}}
+{{- $cfg := $book.Site.Params.bookkit -}}
+{{- $size := .size | default "card" -}}
+{{- $showStatus := .showStatus | default ($cfg.showStatus | default true) -}}
+{{- $showStores := .showStores | default ($cfg.showStores | default true) -}}
+{{- $showFormats := .showFormats | default true -}}
+{{- $cover := partial "bookkit/book-cover-path.html" $book -}}
+{{- $chapterCount := len $book.RegularPages -}}
+{{- $storeAvailable := or $book.Params.publication_aws $book.Params.publication_amazon_url $book.Params.publication_google -}}
+{{- with $book.Params.publication -}}
+  {{- $storeAvailable = or $storeAvailable .aws .amazon .amazon_url .google .google_play .google_play_url -}}
+{{- end -}}
+<article class="bookkit-book-card{{ if not $cover }} bookkit-book-card--no-cover{{ end }}">
+  {{- with $cover }}
+  <a class="bookkit-book-card__cover" href="{{ $book.RelPermalink }}" tabindex="-1" aria-hidden="true">
+    {{ partial "bookkit/book-cover.html" (dict "book" $book "size" $size) }}
+  </a>
+  {{- end }}
+  <div class="bookkit-book-card__body">
+    {{- if $showStatus }}{{ partial "bookkit/book-status.html" $book }}{{ end }}
+    <h2><a href="{{ $book.RelPermalink }}">{{ $book.Title }}</a></h2>
+    {{ with $book.Params.subtitle }}<p class="bookkit-book-card__subtitle">{{ . }}</p>{{ end }}
+    {{ with $book.Description }}<p>{{ . }}</p>{{ end }}
+    <p class="bookkit-book-card__meta">{{ $chapterCount }} chapter{{ if ne $chapterCount 1 }}s{{ end }}</p>
+    {{- if $showFormats }}
+    <p class="bookkit-book-card__formats">
+      <span>Read on the web</span>
+      {{- $epub := false -}}
+      {{- with $book.Params.publication }}{{- with .epub }}{{- $epub = . }}{{- end }}{{- end -}}
+      {{- if and $epub $epub.enabled -}}
+        {{- if $epub.release_url }}<a href="{{ $epub.release_url }}">EPUB available</a>
+        {{- else }}<span>EPUB in production</span>{{ end -}}
+      {{- else }}<span>EPUB planned</span>{{ end -}}
+      {{- if $storeAvailable }}<span>Store edition available</span>{{ end -}}
+    </p>
+    {{- end }}
+    {{- if and $showStores (not $cover) }}
+      {{ partial "bookkit/book-store-links.html" (dict "book" $book "variant" "inline") }}
+    {{- end }}
+    <p class="bookkit-book-card__actions">
+      <a href="{{ $book.RelPermalink }}">Read the book →</a>
+      {{- with .relationURL }}<a href="{{ . }}">{{ $.relationTitle | default "Related" }}</a>{{ end -}}
+    </p>
+  </div>
+</article>
