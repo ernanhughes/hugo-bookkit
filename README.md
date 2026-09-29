@@ -140,17 +140,38 @@ Missing hook partials are silently skipped no-ops: a configured name with
 no matching `layouts/partials/<name>.html` never fails the build. The
 example site pins nonexistent hook names so CI proves this on every build.
 
-## Canonical publication host
+## Canonical ownership
 
-Mirrored libraries can declare a canonical publication host without changing
-reader navigation. Only pages below the configured book section are rewritten;
-ordinary site pages remain self-canonical:
+`bookkit/canonical.html` implements one ownership rule for every section:
+
+```text
+page front matter (canonical_url / canonical_self)
+    ↓
+section native allowlist
+    ↓
+section policy
+    ↓
+self
+```
+
+Configuration (no consumer domain is hard-coded in templates):
 
 ```toml
-[params.books]
-  canonicalBase = "https://programmer.ie"
-  isCanonicalHost = false
+[params.canonical]
+  [params.canonical.sections]
+    books = "https://programmer.ie"
+    post = "https://programmer.ie"
+  [params.canonical.native]
+    post = ["my-native-tutorial", "my-native-essay"]
 ```
+
+Pages whose slug appears in the section native list stay self-canonical;
+individual pages can also set `canonical_self = true` or an absolute
+`canonical_url` in front matter. Consumers with no `[params.canonical]`
+block are fully self-canonical.
+
+Legacy `[params.books] canonicalBase/isCanonicalHost` is still honored for
+the book section when the new block is absent.
 
 BookKit can render reader-facing research dossiers for book chapters.
 Research **data** comes from the consuming site (for example, Writer's
@@ -235,3 +256,26 @@ See [`docs/migration-from-next-books.md`](docs/migration-from-next-books.md) for
 ## Verification
 
 `exampleSite/` is a minimal consumer of the module. CI builds it on every push and pull request so reusable behavior is exercised through the same import mechanism a real book site uses, including the standalone `homeBook` homepage path.
+
+## Compatibility baseline
+
+```text
+Bookkit v0.1.0
+Consumers:
+- programmer.ie (technical-library presentation)
+- aibussin.com (applications/solutions presentation)
+```
+
+Both consumers pin the same tagged release and build warning-clean with
+`hugo --gc --minify --panicOnWarning`. Future releases must verify all
+three builds (exampleSite + both consumers) before tagging. The intended
+release gate:
+
+```text
+Bookkit PR
+    ├── exampleSite PASS
+    ├── programmer.ie fixture PASS
+    └── aibussin.com fixture PASS
+             ▼
+           release
+```

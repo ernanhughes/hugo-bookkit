@@ -1,9 +1,45 @@
+{{/* Bookkit canonical ownership.
+   Precedence (highest first):
+     1. Page front matter: canonical_url (absolute) or canonical_self=true.
+     2. Section native allowlist: [params.canonical.native.<section>] slugs.
+     3. Section policy: [params.canonical.sections.<section>] host.
+     4. Legacy books block: [params.books] canonicalBase/isCanonicalHost.
+     5. Self (.Permalink).
+   No Bookkit template hard-codes any consumer domain; hosts are config.
+*/}}
 {{- $canonical := .Permalink -}}
-{{- $books := index .Site.Params "books" -}}
-{{- $canonicalBase := index $books "canonicalbase" -}}
-{{- $bookSection := .Site.Params.bookkit.bookSection | default "books" -}}
-{{- $bookPrefix := printf "/%s/" (strings.Trim $bookSection "/") -}}
-{{- if and $canonicalBase (hasPrefix .RelPermalink $bookPrefix) -}}
-  {{- $canonical = printf "%s%s" (strings.TrimSuffix "/" $canonicalBase) .RelPermalink -}}
+{{- $section := .Section -}}
+{{- $slug := "" -}}
+{{- with .File }}{{ $slug = .BaseFileName }}{{ end -}}
+
+{{- $override := .Params.canonical_url | default "" -}}
+{{- if $override -}}
+  {{- $canonical = $override -}}
+{{- else if .Params.canonical_self -}}
+  {{- $canonical = .Permalink -}}
+{{- else -}}
+  {{- $host := "" -}}
+  {{- $native := false -}}
+  {{- with .Site.Params.canonical -}}
+    {{- with index .sections $section -}}
+      {{- $host = . -}}
+    {{- end -}}
+    {{- with index .native $section -}}
+      {{- if in . $slug }}{{ $native = true }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if and (not $host) (not $native) -}}
+    {{- $books := .Site.Params.books -}}
+    {{- $bookSection := .Site.Params.bookkit.bookSection | default "books" -}}
+    {{- $bookPrefix := printf "/%s/" (strings.Trim $bookSection "/") -}}
+    {{- with $books -}}
+      {{- if and (index . "canonicalbase") (not (.isCanonicalHost | default false)) (hasPrefix $.RelPermalink $bookPrefix) -}}
+        {{- $host = index . "canonicalbase" -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if and $host (not $native) -}}
+    {{- $canonical = printf "%s%s" (strings.TrimSuffix "/" $host) .RelPermalink -}}
+  {{- end -}}
 {{- end -}}
 <link rel="canonical" href="{{ $canonical }}">
