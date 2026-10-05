@@ -1,0 +1,4 @@
+{{ define "title" }}{{ .Title }} - {{ .Site.Title }}{{ end }}
+{{ define "main" }}
+  {{ partial "bookkit/error-page.html" (dict "page" . "code" (printf "%v" (.Params.error_code | default "500"))) }}
+{{ end }}

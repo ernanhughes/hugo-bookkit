@@ -127,6 +127,41 @@ by `--bookkit-*` variables), so consumers brand it without forking markup.
 Per-call flags `showStatus`, `showStores` and `showFormats` fall back to
 `[params.bookkit]` of the same names.
 
+## Error pages
+
+Bookkit supplies a `layouts/404.html` template with links back to the home page,
+the configured book section and an existing search page. It includes a separate
+`css/bookkit-errors.css` asset and `noindex, follow` metadata. Consumers with a
+custom base template should call `{{ partial "bookkit/error-head.html" . }}` in
+their head; the Bookkit base already does this.
+
+Additional error documents use the shared `bookkit-error` page type. For example,
+create `content/errors/503.md`:
+
+```yaml
+---
+title: Temporarily unavailable
+type: bookkit-error
+error_code: 503
+url: /503.html
+outputs: [HTML]
+build:
+  list: never
+  render: always
+---
+```
+
+Copy is provided for 404 and 500–505, with optional `error_title` and
+`error_message` overrides. Keep any enclosing error section unlisted and
+non-rendering with `build.list: never` and `build.render: never`.
+The production host must serve these documents with the appropriate HTTP status;
+creating a document alone does not configure host error routing. Hugo's
+development server uses the generated 404 for missing requests.
+
+The cover partial also accepts `decorative: true` when a linked card already
+contains the book title; this gives the image an empty alt attribute without
+changing other cover rendering.
+
 ## Optional content hooks
 
 Consumers can inject site-specific blocks without forking templates:

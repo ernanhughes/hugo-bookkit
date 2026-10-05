@@ -1,0 +1,33 @@
+{{/* Shared error presentation; content and production status routing belong
+     to the consuming site/host. Input: {page: Page, code: string}. */}}
+{{- $page := .page -}}
+{{- $code := .code -}}
+{{- $messages := dict
+  "404" (dict "title" "Page not found" "message" "The page may have moved, or the address may be incomplete. There is plenty more to explore in the library.")
+  "500" (dict "title" "Something went wrong" "message" "The server could not complete your request. Try again in a moment, or return to the library.")
+  "501" (dict "title" "This request is not supported" "message" "The server cannot handle this type of request. Return to the library and try opening a page from there.")
+  "502" (dict "title" "We could not reach the site" "message" "A service needed to load this page returned an invalid response. Please try again in a moment.")
+  "503" (dict "title" "Temporarily unavailable" "message" "The site is temporarily unable to handle your request. Please try again shortly.")
+  "504" (dict "title" "The request took too long" "message" "A service needed to load this page did not respond in time. Please try again.")
+  "505" (dict "title" "Connection not supported" "message" "The server does not support the HTTP version used for this request. Try opening the site in a current browser.")
+-}}
+{{- $copy := index $messages $code | default (dict "title" "Unable to open this page" "message" "Please return to the home page and try again.") -}}
+{{- $section := $page.Site.Params.bookkit.bookSection | default "books" -}}
+<section class="bookkit-error" aria-labelledby="bookkit-error-heading" data-bookkit-error="{{ $code }}">
+  <div class="bookkit-error__card">
+    <p class="bookkit-error__eyebrow">{{ $page.Site.Title }}</p>
+    <p class="bookkit-error__code" aria-label="Error {{ $code }}">{{ $code }}</p>
+    <h1 id="bookkit-error-heading">{{ $page.Params.error_title | default $copy.title }}</h1>
+    <p class="bookkit-error__message">{{ $page.Params.error_message | default $copy.message }}</p>
+    <div class="bookkit-error__actions">
+      <a class="bookkit-error__button bookkit-error__button--primary" href="{{ $page.Site.Home.RelPermalink }}">Go to the home page <span aria-hidden="true">&rarr;</span></a>
+      {{- with $page.Site.GetPage (printf "/%s" $section) }}
+        <a class="bookkit-error__button" href="{{ .RelPermalink }}">Browse the books</a>
+      {{- end }}
+      {{- with $page.Site.GetPage "/search" }}
+        <a class="bookkit-error__button" href="{{ .RelPermalink }}">Search the site</a>
+      {{- end }}
+    </div>
+    {{- if eq $code "404" }}<p class="bookkit-error__hint">If you followed an old link, search for the book or chapter title.</p>{{ end }}
+  </div>
+</section>

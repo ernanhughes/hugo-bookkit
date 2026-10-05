@@ -1,0 +1,4 @@
+{{- if or (eq .Kind "404") (eq .Type "bookkit-error") -}}
+<meta name="robots" content="noindex, follow">
+<link rel="stylesheet" href="{{ "css/bookkit-errors.css" | relURL }}">
+{{- end -}}
