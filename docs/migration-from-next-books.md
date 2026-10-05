@@ -71,4 +71,14 @@ The common legacy `publication.amazon*` and `publication.google*` fields remain 
 
 ## Suggested cutover
 
+### Chapter learning actions
+
+The legacy Series Reader combines navigation with site-specific learning
+tools. Keep navigation in BookKit and restore tools with
+`params.bookkit.chapterActionsPartial`. This optional chapter-only hook lives
+inside the reader and receives `{ page, book, bookSlug, chapterSlug }`.
+Concept sidecars, prompt definitions, Browser AI/Colab links and dialogs stay
+in the consumer. The hook coexists with `chapterBeforeContentPartial`, so an
+existing lead/visual block does not need to move or be replaced.
+
 Import BookKit into `next-books`, preserve the old progress storage prefix, remove the duplicated book partials/CSS/JS one subsystem at a time, and use local site overrides only where Programmer.ie intentionally differs from the generic runtime. Once the site renders equivalently, remove the copied implementations.

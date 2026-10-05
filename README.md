@@ -88,6 +88,7 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
   # Optional consuming-site partial hooks:
   # bookExtraPartial = "book-apply-link.html"
   # chapterBeforeContentPartial = "book-visuals.html"
+  # chapterActionsPartial = "my-chapter-actions.html"
 
   [params.bookkit.features]
     math = true
@@ -134,11 +135,24 @@ Consumers can inject site-specific blocks without forking templates:
 [params.bookkit]
   bookExtraPartial = "my-book-extra.html"
   chapterBeforeContentPartial = "my-chapter-lead.html"
+  chapterActionsPartial = "my-chapter-actions.html"
 ```
 
 Missing hook partials are silently skipped no-ops: a configured name with
 no matching `layouts/partials/<name>.html` never fails the build. The
 example site pins nonexistent hook names so CI proves this on every build.
+
+`chapterActionsPartial` renders inside the chapter reader, after its chapter
+links, only in `mode = "chapter"` with a current page. It receives a dictionary:
+`page` (current Hugo page), `book` (parent book page), `bookSlug` and
+`chapterSlug` (last URL segments). Unlike the before-content hook, its context
+is not a bare page. The hook requires the reader to be enabled. Unset, missing
+or empty partials render no action region; landing pages never invoke it.
+BookKit supplies only the `bookkit-reader__actions` container and spacing.
+The consumer owns action count, labels, markup, availability, styles and behavior.
+For example, the site partial can render a link with `{{ .page.RelPermalink }}`
+or resolve resources using `{{ .page.Resources }}`. No JavaScript is required
+by the hook itself. CI exercises an actual consumer hook as well as no-op cases.
 
 ## Canonical ownership
 

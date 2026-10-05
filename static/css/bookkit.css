@@ -219,6 +219,8 @@ img { max-width: 100%; height: auto; }
 .bookkit-reader__chapter.is-current { border-color: var(--bookkit-accent); background: var(--bookkit-accent); color: #fff; }
 .bookkit-reader__chapter.is-last-read:not(.is-current) { border-color: var(--bookkit-accent); background: color-mix(in srgb, var(--bookkit-accent) 8%, white); color: var(--bookkit-accent); }
 
+.bookkit-reader__actions { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--bookkit-border); min-width: 0; }
+
 .bookkit-chapters { margin-top: 4rem; }
 .bookkit-chapter-list { display: grid; gap: 0.75rem; }
 .bookkit-chapter-card {

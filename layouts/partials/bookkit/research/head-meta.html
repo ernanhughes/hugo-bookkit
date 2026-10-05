@@ -1,15 +1,25 @@
 {{/* Bookkit Research: head metadata for research outputs. Input: the
-current Page. Emits a noindex tag for state-only NEVER_RESEARCHED
-research pages; nothing otherwise. Called from head.html so it works
-regardless of which base layout the consuming site uses. */}}
+current Page. Emits a noindex tag for any research page that does not carry
+usable research data; nothing otherwise. Called from head.html so it works
+regardless of which base layout the consuming site uses.
+
+Indexing policy, deliberately conservative:
+  no dossier at all         -> noindex  (book is not in the research programme)
+  dossier state != CURRENT -> noindex  (never researched / stale / failed)
+  dossier state == CURRENT -> normal indexing
+
+The previous version matched only a literal NEVER_RESEARCHED dossier, so a
+book with no dossiers at all produced a research URL with no noindex. */}}
 {{- $ids := partial "bookkit/research/chapter-ids.html" . -}}
 {{- $state := "" -}}
 {{- with $ids -}}
   {{- $loaded := partial "bookkit/research/dossier.html" (dict "page" $ "book" .book "chapter" .chapter) -}}
   {{- with $loaded.dossier -}}
-    {{- $state = .research.state -}}
+    {{- $state = .research.state | default "NEVER_RESEARCHED" -}}
+  {{- else -}}
+    {{- $state = "NO_DOSSIER" -}}
   {{- end -}}
 {{- end -}}
-{{- if eq $state "NEVER_RESEARCHED" }}
+{{- if and $state (ne $state "CURRENT") }}
 <meta name="robots" content="noindex">
 {{- end }}

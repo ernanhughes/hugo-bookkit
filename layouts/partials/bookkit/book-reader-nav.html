@@ -78,5 +78,15 @@
         >{{ $number }}</a>
       {{- end -}}
     </div>
+    {{- if and (eq $mode "chapter") $current -}}
+      {{- with $cfg.chapterActionsPartial -}}
+        {{- if templates.Exists (print "partials/" .) -}}
+          {{- $actions := partial . (dict "page" $current "book" $book "bookSlug" $bookSlug "chapterSlug" (path.Base (strings.TrimSuffix "/" $current.RelPermalink))) -}}
+          {{- with $actions -}}
+            <div class="bookkit-reader__actions">{{ . }}</div>
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
   </nav>
 {{- end -}}

@@ -52,10 +52,18 @@ No research logic: counts come straight from dossier.summary. */}}
   </p>
   <p class="research-card__notice">This chapter has not yet been researched.</p>
   {{- end -}}
-  {{- with .page.OutputFormats.Get "Research" }}
+  {{/* Link to the research page only when it has something to show. The
+  card itself is only reached with a dossier, and a dossier whose state is
+  CURRENT is the only case where the research page carries real content, so
+  the link is gated on that rather than on the output format existing. This
+  keeps a reader from being sent to a page that says only that research is
+  unavailable. */}}
+  {{- if eq $state "CURRENT" -}}
+    {{- with .page.OutputFormats.Get "Research" -}}
   <p class="research-card__links">
     <a class="research-card__link" href="{{ .RelPermalink }}">View research</a>
   </p>
+    {{- end -}}
   {{- end }}
   <p class="research-card__live" data-research-live hidden></p>
 </section>

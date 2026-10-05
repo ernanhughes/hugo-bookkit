@@ -19,6 +19,7 @@
   showChapterList = true
   bookExtraPartial = ""
   chapterBeforeContentPartial = ""
+  chapterActionsPartial = ""
 
   [params.bookkit.features]
     math = true

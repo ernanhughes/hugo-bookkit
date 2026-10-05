@@ -27,3 +27,6 @@ jobs:
 
       - name: Build imported-module example
         run: hugo --source exampleSite --minify --panicOnWarning
+
+      - name: Verify chapter action hook and no-op consumers
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
