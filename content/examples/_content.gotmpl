@@ -1,0 +1,14 @@
+{{/* Hugo creates the top-level section but not nested sections without
+     branch bundles. Generate only those nodes; author files remain real pages.
+     File access here avoids Site.Pages, unavailable during content adaptation. */}}
+{{ .EnableAllLanguages }}
+{{ if fileExists "content/examples" }}
+  {{ range readDir "content/examples" }}
+    {{ if .IsDir }}
+      {{ $book := .Name }}
+      {{ if not (fileExists (printf "content/examples/%s/_index.md" $book)) }}
+        {{ $.AddPage (dict "kind" "section" "path" $book "title" (printf "%s examples" $book)) }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+{{ end }}

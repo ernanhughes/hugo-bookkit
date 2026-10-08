@@ -1,0 +1,21 @@
+{{/* Resolve relative links once against the example, not its inline host. */}}
+{{- $destination := .destination -}}
+{{- $url := urls.Parse $destination -}}
+{{- if and (not $url.IsAbs) $url.Path (not (strings.HasPrefix $destination "//")) -}}
+  {{- $resolved := "" -}}
+  {{- with .page.Resources.Get $url.Path -}}{{- $resolved = .RelPermalink -}}{{- end -}}
+  {{- if not $resolved -}}
+    {{- with .page.GetPage $url.Path -}}{{- $resolved = .RelPermalink -}}{{- end -}}
+  {{- end -}}
+  {{- if not $resolved -}}
+    {{- if strings.HasPrefix $url.Path "/" -}}
+      {{- $resolved = $url.Path | relURL -}}
+    {{- else -}}
+      {{- $resolved = urls.JoinPath .page.RelPermalink $url.Path -}}
+    {{- end -}}
+  {{- end -}}
+  {{- with $url.RawQuery -}}{{- $resolved = printf "%s?%s" $resolved . -}}{{- end -}}
+  {{- with $url.Fragment -}}{{- $resolved = printf "%s#%s" $resolved . -}}{{- end -}}
+  {{- $destination = $resolved -}}
+{{- end -}}
+{{- return $destination -}}

@@ -1,0 +1,17 @@
+{{- $records := slice -}}
+{{- $catalog := partialCached "bookkit/examples/catalog.html" .Site .Site.Language.Lang -}}
+{{- range $catalog.records -}}
+  {{- $bookTitle := .book -}}{{- $chapterTitle := "" -}}{{- $chapterURL := "" -}}
+  {{- with .bookPage -}}{{- $bookTitle = .Title -}}{{- end -}}
+  {{- with .parent -}}{{- $chapterTitle = .Title -}}{{- $chapterURL = .RelPermalink -}}{{- end -}}
+  {{/* Bound both extraction work and record size. This is discovery search;
+       important later identifiers belong in metadata tags. */}}
+  {{- $source := printf "%.20000s" .page.RawContent -}}
+  {{- $terms := uniq (findRE "[[:alnum:]_+#]{2,64}" (lower $source)) | first 120 -}}
+  {{- $records = $records | append (dict "title" .page.Title "url" .page.RelPermalink "type" "Example"
+    "series" (printf "%s · %s" $bookTitle $chapterTitle) "book" .book "chapter" .chapter "bookTitle" $bookTitle
+    "chapterTitle" $chapterTitle "chapterUrl" $chapterURL
+    "description" (printf "%.200s" (.page.Description | default .page.Plain | plainify)) "date" ""
+    "tags" (.page.Params.tags | default slice) "terms" $terms "priority" 3) -}}
+{{- end -}}
+{{- return $records -}}

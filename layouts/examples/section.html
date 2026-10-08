@@ -1,0 +1,40 @@
+{{ define "main" }}
+{{- $bookID := "" -}}
+{{- if ne .Path "/examples" -}}{{- $bookID = path.Base .Path -}}{{- end -}}
+{{- $records := partialCached "bookkit/examples/search-records.html" . .Site.Language.Lang -}}
+{{- if $bookID -}}{{- $records = where $records "book" $bookID -}}{{- end -}}
+{{- $index := resources.FromString (printf "search/examples-%s.json" ($bookID | default "all")) (dict "version" 2 "records" $records | jsonify) | resources.Fingerprint "sha256" -}}
+<section class="site-search bookkit-example-library" data-site-search data-search-browse data-search-index-url="{{ $index.RelPermalink }}">
+  <header class="bookkit-page-header"><span class="bookkit-eyebrow">Example library</span>
+    <h1>{{ if $bookID }}{{ with .Site.GetPage (printf "/%s/%s" (.Site.Params.bookkit.bookSection | default "books") $bookID) }}{{ .Title }}{{ else }}{{ $bookID }}{{ end }} examples{{ else }}Examples{{ end }}</h1>
+    {{ with .Content }}<div class="bookkit-prose">{{ . }}</div>{{ end }}
+    {{ if $bookID }}<p><a href="{{ "examples/" | relURL }}">All examples</a></p>{{ end }}
+  </header>
+  <form role="search" data-site-search-form>
+    <label for="site-search-input">Search examples</label>
+    <input id="site-search-input" name="q" type="search" data-site-search-input>
+    <button type="submit">Search</button>
+    {{ if not $bookID }}<label for="example-book">Book</label>
+      <select id="example-book" data-search-book><option value="">All books</option>
+      {{ range sort (uniq (apply $records "index" "." "book")) }}
+        <option value="{{ . }}">{{ with $.Site.GetPage (printf "/%s/%s" ($.Site.Params.bookkit.bookSection | default "books") .) }}{{ .Title }}{{ else }}{{ . }}{{ end }}</option>
+      {{ end }}</select>{{ end }}
+  </form>
+  <p role="status" data-search-status>Loading examples…</p><div data-search-results></div>
+  <template id="site-search-result-template"><article class="bookkit-example-card">
+    <span data-result-type></span> · <span data-result-series></span><time data-result-date></time>
+    <h2><a data-result-link></a></h2><p data-result-description></p><a data-result-action>Open example →</a>
+  </article></template>
+  <div class="bookkit-example-paging">
+    <button type="button" data-search-prev hidden>Previous results</button>
+    <button type="button" data-search-next hidden>Next results</button>
+  </div>
+  {{- $pager := .Paginate .RegularPagesRecursive 80 -}}
+  <noscript><p>Search requires JavaScript. Browse examples below.</p><ul>{{ range $pager.Pages }}
+    {{- $record := partial "bookkit/examples/lookup.html" . -}}
+    <li><a href="{{ .RelPermalink }}">{{ .Title }}</a>{{ with $record.bookPage }} — {{ .Title }}{{ end }}</li>
+  {{ end }}</ul>
+  {{ with $pager.Prev }}<a href="{{ .URL }}">Previous examples</a>{{ end }}
+  {{ with $pager.Next }}<a href="{{ .URL }}">Next examples</a>{{ end }}</noscript>
+</section>
+{{ end }}

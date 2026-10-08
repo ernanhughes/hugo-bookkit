@@ -1,0 +1,19 @@
+.bookkit-example { margin-block: .75rem; min-width: 0; }
+.bookkit-example__trigger { width: fit-content; padding: .6rem 1rem; border: 1px solid var(--border, #ccd6e0); border-radius: .5rem; cursor: pointer; font-weight: 600; }
+.bookkit-example__panel { padding: 1rem; margin-top: .75rem; border: 1px solid var(--border, #ccd6e0); border-radius: .5rem; background: var(--surface, #fff); min-width: 0; }
+.bookkit-example__heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.bookkit-example__heading h2 { margin: 0; font-size: 1.4rem; line-height: 1.3; flex: 1 1 16rem; }
+.bookkit-example-content { max-width: 100%; overflow-wrap: anywhere; }
+.bookkit-example-content table { display: block; max-width: 100%; overflow-x: auto; }
+.bookkit-example-code { margin-block: 1rem; min-width: 0; }
+.bookkit-example-code pre { overflow-x: auto; max-width: 100%; }
+.bookkit-example-code textarea, .bookkit-example-prompt textarea { width: 100%; box-sizing: border-box; min-height: 10rem; font: .875rem/1.5 monospace; }
+.bookkit-example button, .bookkit-example-code button, .bookkit-example-prompt button, .bookkit-example-library button, .bookkit-example-library select, .bookkit-example-library input { min-height: 44px; font: inherit; max-width: 100%; }
+.bookkit-example button, .bookkit-example-code button, .bookkit-example-prompt button, .bookkit-example-library button { padding: .45rem .75rem; border: 1px solid var(--border, #ccd6e0); border-radius: .4rem; background: #f4f7fb; color: inherit; cursor: pointer; }
+.bookkit-example-code [role=status], .bookkit-example-prompt [role=status] { margin-inline: .5rem; }
+.bookkit-example-library form { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.bookkit-example-library input { flex: 1 1 12rem; min-width: 0; }
+.bookkit-example-card { padding: 1rem 0; border-bottom: 1px solid var(--border, #ccd6e0); }
+.bookkit-example-prompt { margin-block: 1rem; }
+.bookkit-example-prompt summary { cursor: pointer; padding: .5rem; }
+.bookkit-example__trigger:focus-visible, .bookkit-example button:focus-visible { outline: 3px solid var(--accent, #3978c5); outline-offset: 3px; }

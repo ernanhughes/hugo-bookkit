@@ -1,0 +1,23 @@
+{{ define "main" }}
+{{- $record := partial "bookkit/examples/lookup.html" . -}}
+<article class="bookkit-example-page">
+  <header class="bookkit-page-header"><span class="bookkit-eyebrow">Example</span>
+    <h1>{{ .Title }}</h1>{{ with .Description }}<p>{{ . }}</p>{{ end }}
+    <nav aria-label="Example navigation"><a href="{{ "examples/" | relURL }}">All examples</a>
+      {{ with .Site.GetPage (printf "/examples/%s" $record.book) }} · <a href="{{ .RelPermalink }}">Book examples</a>{{ end }}
+      {{ with $record.parent }} · <a href="{{ .RelPermalink }}">Back to chapter: {{ .Title }}</a>{{ end }}</nav>
+  </header>
+  {{ partial "bookkit/examples/content.html" . }}
+  {{ with $record.parent }}
+    <section aria-label="Example AI prompts">
+      {{ range slice "understand" "apply" }}
+        <details class="bookkit-example-prompt"><summary>{{ . | title }} this example</summary>
+          <p>Copy this prompt into your AI tool. No code runs here.</p>
+          <textarea aria-label="{{ . | title }} prompt" readonly rows="12">{{ partial "bookkit/examples/prompt-context.html" (dict "page" $record.parent "action" .) }}</textarea>
+          <button type="button" data-example-copy-prompt hidden>Copy prompt</button><span role="status"></span>
+        </details>
+      {{ end }}
+    </section>
+  {{ end }}
+</article>
+{{ end }}

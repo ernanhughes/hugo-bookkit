@@ -1,0 +1,6 @@
+{{- $record := dict -}}
+{{- $catalog := partialCached "bookkit/examples/catalog.html" .Site .Site.Language.Lang -}}
+{{- with partial "bookkit/examples/identity.html" . -}}
+  {{- $record = index $catalog.byKey .key | default dict -}}
+{{- end -}}
+{{- return $record -}}

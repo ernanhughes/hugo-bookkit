@@ -1,0 +1,14 @@
+{{/* Source identity, independent of title, slug, URL overrides and baseURL. */}}
+{{- $id := dict -}}
+{{- with .File -}}
+  {{- $parts := split (strings.TrimSuffix "/" (replace .Dir "\\" "/")) "/" -}}
+  {{- $section := index $parts 0 -}}
+  {{- if and (ge (len $parts) 2) (or (eq $section "examples") (eq $section ($.Site.Params.bookkit.bookSection | default "books"))) -}}
+    {{- $chapter := .BaseFileName -}}
+    {{- if eq $chapter "index" -}}{{- $chapter = index $parts (sub (len $parts) 1) -}}{{- end -}}
+    {{- if ne $chapter "_index" -}}
+      {{- $id = dict "book" (index $parts 1) "chapter" $chapter "key" (printf "%s/%s" (index $parts 1) $chapter) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $id -}}

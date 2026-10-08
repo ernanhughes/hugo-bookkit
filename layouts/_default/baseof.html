@@ -21,6 +21,8 @@
     <script src="{{ "js/book-reader.js" | relURL }}" defer></script>
   {{- end }}
   {{ partial "bookkit/research/body-assets.html" . }}
+  <script src="{{ "js/bookkit-examples.js" | relURL }}" defer></script>
+  {{ if eq .Section "examples" }}<script src="{{ "js/bookkit-search.js" | relURL }}" defer></script>{{ end }}
   {{- range $cfg.customJS }}
     <script src="{{ . | relURL }}" defer></script>
   {{- end }}

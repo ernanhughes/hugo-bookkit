@@ -1,0 +1,5 @@
+<div class="bookkit-example-code" data-example-code>
+  {{ highlight .Inner (.Type | default "text") "linenos=false" }}
+  <textarea data-example-source hidden readonly aria-hidden="true" aria-label="Code source">{{ .Inner }}</textarea>
+  <button type="button" data-example-copy hidden>Copy code</button><span role="status"></span>
+</div>

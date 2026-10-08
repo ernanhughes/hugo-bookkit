@@ -1,0 +1,15 @@
+{{/* The body is copied, never stuffed into a URL. Omit oversized source whole. */}}
+{{- $text := "" -}}
+{{- with partial "bookkit/examples/lookup.html" .page -}}
+  {{- $source := .page.RawContent -}}
+  {{- $limit := 12000 -}}
+  {{- if gt (len $source) $limit -}}
+    {{- $source = "Example source exceeds the 12,000-byte context budget and is omitted in full. Ask me to paste the relevant complete code block, expected outcome and limitations before adapting it. Do not infer missing code." -}}
+  {{- end -}}
+  {{- $task := "Explain how this implementation demonstrates the chapter's mechanism, its expected outcome and its limitations." -}}
+  {{- if eq $.action "apply" -}}
+    {{- $task = "Help me adapt this example to my project. First identify the mechanism. Ask only for project details necessary to assess applicability. Prefer the smallest useful implementation. Explain adaptations before making changes and define verification. The original example does not prove an adaptation works." -}}
+  {{- end -}}
+  {{- $text = printf "\n\nCanonical example context\nChapter: %s\n%s\nExample: %s\n%s\n\n%s\n\n%s\nDistinguish documented behaviour, observed behaviour and proposed choices. External AI may not be able to access these URLs, especially localhost or private previews. Use the source supplied here; ask for missing material rather than inventing it.\n" $.page.Title $.page.Permalink .page.Title .page.Permalink $source $task -}}
+{{- end -}}
+{{- return $text -}}

@@ -1,0 +1,8 @@
+{{- $book := . -}}
+{{- $catalog := partialCached "bookkit/examples/catalog.html" .Site .Site.Language.Lang -}}
+{{- $bookID := path.Base .Path -}}
+{{- if where $catalog.records "book" $bookID -}}
+  {{- with .Site.GetPage (printf "/examples/%s" $bookID) -}}
+    <p><a class="bookkit-text-link" href="{{ .RelPermalink }}">Browse Examples →</a></p>
+  {{- end -}}
+{{- end -}}

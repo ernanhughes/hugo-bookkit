@@ -1,11 +1,17 @@
 <header class="bookkit-header">
   <div class="bookkit-header__inner">
     <a class="bookkit-brand" href="{{ .Site.Home.RelPermalink }}">{{ .Site.Title }}</a>
-    {{- with .Site.Menus.main }}
+    {{- $catalog := partialCached "bookkit/examples/catalog.html" .Site .Site.Language.Lang -}}
+    {{- if or .Site.Menus.main $catalog.records }}
       <nav class="bookkit-menu" aria-label="Main navigation">
-        {{- range . }}
+        {{- $hasExamplesLink := false -}}
+        {{- range .Site.Menus.main }}
           <a href="{{ .URL | relURL }}">{{ .Name }}</a>
+          {{- if in .URL "/examples" -}}{{- $hasExamplesLink = true -}}{{- end -}}
         {{- end }}
+        {{- if and $catalog.records (not $hasExamplesLink) -}}
+          {{- with .Site.GetPage "/examples" -}}<a href="{{ .RelPermalink }}">Examples</a>{{- end -}}
+        {{- end -}}
       </nav>
     {{- end }}
   </div>

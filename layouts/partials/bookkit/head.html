@@ -19,6 +19,7 @@
 
 <link rel="stylesheet" href="{{ "css/bookkit.css" | relURL }}">
 {{ partial "bookkit/research/head-assets.html" . }}
+<link rel="stylesheet" href="{{ "css/bookkit-examples.css" | relURL }}">
 {{- range .Site.Params.bookkit.customCSS }}
 <link rel="stylesheet" href="{{ . | relURL }}">
 {{- end }}

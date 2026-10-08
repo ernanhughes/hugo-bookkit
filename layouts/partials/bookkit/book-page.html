@@ -23,6 +23,8 @@
         {{ partial "bookkit/book-reader-nav.html" (dict "book" $book "current" false "mode" "landing") }}
       {{- end }}
 
+      {{ partial "bookkit/examples/book-link.html" $book }}
+
       {{- with $book.Site.Params.bookkit.bookExtraPartial }}
         {{- if templates.Exists (print "partials/" .) }}{{ partial . $book }}{{ end }}
       {{- end }}

@@ -1,0 +1,23 @@
+{{/* One scan per language/build. Hugo itself decides draft eligibility. */}}
+{{- $store := newScratch -}}
+{{- $store.Set "chapters" dict -}}
+{{- $store.Set "examples" dict -}}
+{{- $store.Set "records" slice -}}
+{{- $bookSection := .Params.bookkit.bookSection | default "books" -}}
+{{- range $page := where .RegularPages "Section" $bookSection -}}
+  {{- with partial "bookkit/examples/identity.html" $page -}}
+    {{- $store.SetInMap "chapters" .key $page -}}
+  {{- end -}}
+{{- end -}}
+{{- range $page := (where .RegularPages "Section" "examples").ByWeight -}}
+  {{- with partial "bookkit/examples/identity.html" $page -}}
+    {{- if index ($store.Get "examples") .key -}}{{- errorf "Duplicate example mapping: %s" .key -}}{{- end -}}
+    {{- $chapter := index ($store.Get "chapters") .key -}}
+    {{- $book := $.GetPage (printf "/%s/%s" $bookSection .book) -}}
+    {{- $record := merge . (dict "page" $page "parent" $chapter "bookPage" $book) -}}
+    {{- $store.Add "records" (slice $record) -}}
+    {{- $store.SetInMap "examples" .key $record -}}
+    {{- if not $chapter -}}{{- warnf "Orphan example %s: no published chapter for %s" $page.File.Path .key -}}{{- end -}}
+  {{- else -}}{{- warnf "Example has no book/chapter source identity: %s" $page.File.Path -}}{{- end -}}
+{{- end -}}
+{{- return (dict "records" ($store.Get "records") "byKey" ($store.Get "examples")) -}}
