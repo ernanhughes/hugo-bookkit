@@ -1,5 +1,15 @@
 {{ define "main" }}
   {{- $book := .Parent -}}
+
+  {{/* Research is enabled for pages by default.
+       A page may explicitly opt out with:
+       research_dossier = false
+  */}}
+  {{- $researchDossierEnabled := true -}}
+  {{- if isset .Params "research_dossier" -}}
+    {{- $researchDossierEnabled = .Params.research_dossier -}}
+  {{- end -}}
+
   <article class="bookkit-chapter">
     <header class="bookkit-chapter-header">
       {{- with $book }}
@@ -14,23 +24,45 @@
     {{- end }}
 
     {{- with .Site.Params.bookkit.chapterBeforeContentPartial }}
-      {{- if templates.Exists (print "partials/" .) }}{{ partial . $ }}{{ end }}
+      {{- if templates.Exists (print "partials/" .) }}
+        {{ partial . $ }}
+      {{- end }}
     {{- end }}
 
     <div class="bookkit-prose">
       {{ .Content }}
     </div>
 
-    {{- if .Site.Params.bookkit.features.research }}
+    {{- if and .Site.Params.bookkit.features.research $researchDossierEnabled }}
       {{- $researchIds := partial "bookkit/research/chapter-ids.html" . -}}
+
       {{- with $researchIds }}
-        {{- $researchLoad := partial "bookkit/research/dossier.html" (dict "page" $ "book" .book "chapter" .chapter) -}}
+        {{- $researchLoad := partial "bookkit/research/dossier.html"
+          (dict
+            "page" $
+            "book" .book
+            "chapter" .chapter
+          )
+        -}}
+
         {{- with $researchLoad.dossier }}
-          {{ partial "bookkit/research/status-card.html" (dict "page" $ "ids" $researchIds "dossier" .) }}
+          {{ partial "bookkit/research/status-card.html"
+            (dict
+              "page" $
+              "ids" $researchIds
+              "dossier" .
+            )
+          }}
         {{- else }}
           {{- $researchCfg := partial "bookkit/research/config.html" $ -}}
+
           {{- if and $researchLoad.expected $researchCfg.warnMissingDossier }}
-            {{- warnf "research dossier missing for book %s chapter %s (page %s)" $researchIds.book $researchIds.chapter $.RelPermalink }}
+            {{- warnf
+              "research dossier missing for book %s chapter %s (page %s)"
+              $researchIds.book
+              $researchIds.chapter
+              $.RelPermalink
+            }}
           {{- end }}
         {{- end }}
       {{- end }}
