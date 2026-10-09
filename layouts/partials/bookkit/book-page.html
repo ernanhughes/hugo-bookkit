@@ -39,8 +39,8 @@
 
   {{- if $book.Site.Params.bookkit.showChapterList }}
     <section class="bookkit-chapters" id="contents">
-      <span class="bookkit-eyebrow">Contents</span>
-      <h2>Chapters</h2>
+      <span class="bookkit-eyebrow">{{ i18n "bookkit_contents" }}</span>
+      <h2>{{ i18n "bookkit_chapters" }}</h2>
       <div class="bookkit-chapter-list">
         {{- range $i, $chapter := $book.RegularPages.ByWeight }}
           {{- $number := partial "bookkit/chapter-number.html" (dict "page" $chapter "position" (add $i 1)) -}}

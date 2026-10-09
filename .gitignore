@@ -5,3 +5,4 @@ exampleSite/resources
 resources
 .hugo_build.lock
 __pycache__/
+/.cache/

@@ -304,6 +304,10 @@ See [`docs/migration-from-next-books.md`](docs/migration-from-next-books.md) for
 
 ## Verification
 
+For multilingual consumers, see [Multilingual setup](docs/multilingual.md).
+Core reader controls include English and Simplified Chinese translations,
+language navigation, and separate reading progress for each language.
+
 `exampleSite/` is a minimal consumer of the module. CI builds it on every push and pull request so reusable behavior is exercised through the same import mechanism a real book site uses, including the standalone `homeBook` homepage path.
 
 ## Compatibility baseline

@@ -1,0 +1,86 @@
+[bookkit_languages]
+other = "语言"
+
+[bookkit_language_home]
+other = "{{ .Language }}首页（此页面尚未翻译）"
+
+[bookkit_main_navigation]
+other = "主导航"
+
+[bookkit_chapter_navigation]
+other = "书籍章节导航"
+
+[bookkit_start_reading]
+other = "开始阅读"
+
+[bookkit_continue_reading]
+other = "继续阅读"
+
+[bookkit_start_chapter]
+other = "开始阅读第 {{ .Number }} 章 →"
+
+[bookkit_continue_chapter]
+other = "继续阅读第 {number} 章 →"
+
+[bookkit_chapter_position]
+other = "第 {{ .Number }} 章，共 {{ .Total }} 章"
+
+[bookkit_chapters]
+other = "章节"
+
+[bookkit_chapter_count]
+other = "{{ .Count }} 章"
+
+[bookkit_jump_chapter]
+other = "跳转到章节"
+
+[bookkit_chapter_title]
+other = "第 {{ .Number }} 章：{{ .Title }}"
+
+[bookkit_contents]
+other = "目录"
+
+[bookkit_prev_next]
+other = "上一章和下一章"
+
+[bookkit_previous]
+other = "上一章"
+
+[bookkit_next]
+other = "下一章"
+
+[bookkit_read_web]
+other = "在线阅读"
+
+[bookkit_epub_available]
+other = "EPUB 已提供"
+
+[bookkit_epub_production]
+other = "EPUB 制作中"
+
+[bookkit_epub_planned]
+other = "计划提供 EPUB"
+
+[bookkit_store_available]
+other = "商店版已提供"
+
+[bookkit_read_book]
+other = "阅读本书 →"
+
+[bookkit_example]
+other = "示例"
+
+[bookkit_examples]
+other = "示例"
+
+[bookkit_close_example]
+other = "关闭示例"
+
+[bookkit_open_example]
+other = "打开独立示例 →"
+
+[bookkit_browse_examples]
+other = "浏览示例 →"
+
+[bookkit_examples_title]
+other = "{{ .Book }}示例"

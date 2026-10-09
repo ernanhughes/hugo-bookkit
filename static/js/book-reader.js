@@ -102,8 +102,9 @@
     var chapterNumber = savedLink.dataset.chapterNumber || saved.number || "";
     resume.classList.add("has-progress");
     resumeLink.href = savedLink.href;
-    kicker.textContent = "Continue reading";
-    title.textContent = savedLink.dataset.chapterTitle || saved.title || "Continue reading";
-    action.textContent = chapterNumber ? "Continue Chapter " + chapterNumber + " →" : "Continue reading →";
+    var continueReading = reader.dataset.continueReading || "Continue reading";
+    kicker.textContent = continueReading;
+    title.textContent = savedLink.dataset.chapterTitle || saved.title || continueReading;
+    action.textContent = chapterNumber ? (reader.dataset.continueChapter || "Continue Chapter {number} →").replace("{number}", chapterNumber) : continueReading + " →";
   });
 })();

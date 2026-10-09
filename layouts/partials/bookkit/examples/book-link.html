@@ -3,6 +3,6 @@
 {{- $bookID := path.Base .Path -}}
 {{- if where $catalog.records "book" $bookID -}}
   {{- with .Site.GetPage (printf "/examples/%s" $bookID) -}}
-    <p><a class="bookkit-text-link" href="{{ .RelPermalink }}">Browse Examples →</a></p>
+    <p><a class="bookkit-text-link" href="{{ .RelPermalink }}">{{ i18n "bookkit_browse_examples" }}</a></p>
   {{- end -}}
 {{- end -}}

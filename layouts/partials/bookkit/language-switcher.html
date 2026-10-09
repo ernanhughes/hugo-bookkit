@@ -1,0 +1,16 @@
+{{- if hugo.IsMultilingual -}}
+{{- $page := . -}}
+<nav class="bookkit-languages" aria-label="{{ i18n "bookkit_languages" }}">
+  {{- range .Site.Home.AllTranslations -}}
+    {{- $target := . -}}
+    {{- $translated := false -}}
+    {{- range $page.AllTranslations -}}
+      {{- if eq .Language.Lang $target.Language.Lang -}}
+        {{- $target = . -}}
+        {{- $translated = true -}}
+      {{- end -}}
+    {{- end -}}
+    <a href="{{ $target.RelPermalink }}" lang="{{ .Language.Lang }}" hreflang="{{ .Language.Lang }}"{{ if eq .Language.Lang $page.Language.Lang }} aria-current="page"{{ else if not $translated }} title="{{ i18n "bookkit_language_home" (dict "Language" (.Language.Label | default .Language.Lang)) }}"{{ end }}>{{ .Language.Label | default .Language.Lang }}</a>
+  {{- end -}}
+</nav>
+{{- end -}}

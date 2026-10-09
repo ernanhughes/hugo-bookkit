@@ -1,0 +1,87 @@
+[bookkit_languages]
+other = "Languages"
+
+[bookkit_language_home]
+other = "{{ .Language }} home (this page is not translated yet)"
+
+[bookkit_main_navigation]
+other = "Main navigation"
+
+[bookkit_chapter_navigation]
+other = "Book chapter navigation"
+
+[bookkit_start_reading]
+other = "Start reading"
+
+[bookkit_continue_reading]
+other = "Continue reading"
+
+[bookkit_start_chapter]
+other = "Start Chapter {{ .Number }} →"
+
+[bookkit_continue_chapter]
+other = "Continue Chapter {number} →"
+
+[bookkit_chapter_position]
+other = "Chapter {{ .Number }} of {{ .Total }}"
+
+[bookkit_chapters]
+other = "Chapters"
+
+[bookkit_chapter_count]
+one = "{{ .Count }} chapter"
+other = "{{ .Count }} chapters"
+
+[bookkit_jump_chapter]
+other = "Jump to chapter"
+
+[bookkit_chapter_title]
+other = "Chapter {{ .Number }}: {{ .Title }}"
+
+[bookkit_contents]
+other = "Contents"
+
+[bookkit_prev_next]
+other = "Previous and next chapter"
+
+[bookkit_previous]
+other = "Previous"
+
+[bookkit_next]
+other = "Next"
+
+[bookkit_read_web]
+other = "Read on the web"
+
+[bookkit_epub_available]
+other = "EPUB available"
+
+[bookkit_epub_production]
+other = "EPUB in production"
+
+[bookkit_epub_planned]
+other = "EPUB planned"
+
+[bookkit_store_available]
+other = "Store edition available"
+
+[bookkit_read_book]
+other = "Read the book →"
+
+[bookkit_example]
+other = "Example"
+
+[bookkit_examples]
+other = "Examples"
+
+[bookkit_close_example]
+other = "Close example"
+
+[bookkit_open_example]
+other = "Open standalone example →"
+
+[bookkit_browse_examples]
+other = "Browse Examples →"
+
+[bookkit_examples_title]
+other = "{{ .Book }} examples"

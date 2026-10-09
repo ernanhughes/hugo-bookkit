@@ -9,18 +9,18 @@
 {{- end -}}
 
 {{- if ge $currentIndex 0 -}}
-  <nav class="bookkit-prev-next" aria-label="Previous and next chapter">
+  <nav class="bookkit-prev-next" aria-label="{{ i18n "bookkit_prev_next" }}">
     <div>
       {{- if gt $currentIndex 0 -}}
         {{- $previous := index $pages (sub $currentIndex 1) -}}
-        <span class="bookkit-prev-next__label">Previous</span>
+        <span class="bookkit-prev-next__label">{{ i18n "bookkit_previous" }}</span>
         <a href="{{ $previous.RelPermalink }}">← {{ $previous.Title }}</a>
       {{- end -}}
     </div>
     <div class="bookkit-prev-next__next">
       {{- if lt (add $currentIndex 1) (len $pages) -}}
         {{- $next := index $pages (add $currentIndex 1) -}}
-        <span class="bookkit-prev-next__label">Next</span>
+        <span class="bookkit-prev-next__label">{{ i18n "bookkit_next" }}</span>
         <a href="{{ $next.RelPermalink }}">{{ $next.Title }} →</a>
       {{- end -}}
     </div>

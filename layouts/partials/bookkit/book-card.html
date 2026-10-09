@@ -33,24 +33,24 @@
     <h2><a href="{{ $book.RelPermalink }}">{{ $book.Title }}</a></h2>
     {{ with $book.Params.subtitle }}<p class="bookkit-book-card__subtitle">{{ . }}</p>{{ end }}
     {{ with $book.Description }}<p>{{ . }}</p>{{ end }}
-    <p class="bookkit-book-card__meta">{{ $chapterCount }} chapter{{ if ne $chapterCount 1 }}s{{ end }}</p>
+    <p class="bookkit-book-card__meta">{{ i18n "bookkit_chapter_count" (dict "Count" $chapterCount) }}</p>
     {{- if $showFormats }}
     <p class="bookkit-book-card__formats">
-      <span>Read on the web</span>
+      <span>{{ i18n "bookkit_read_web" }}</span>
       {{- $epub := false -}}
       {{- with $book.Params.publication }}{{- with .epub }}{{- $epub = . }}{{- end }}{{- end -}}
       {{- if and $epub $epub.enabled -}}
-        {{- if $epub.release_url }}<a href="{{ $epub.release_url }}">EPUB available</a>
-        {{- else }}<span>EPUB in production</span>{{ end -}}
-      {{- else }}<span>EPUB planned</span>{{ end -}}
-      {{- if $storeAvailable }}<span>Store edition available</span>{{ end -}}
+        {{- if $epub.release_url }}<a href="{{ $epub.release_url }}">{{ i18n "bookkit_epub_available" }}</a>
+        {{- else }}<span>{{ i18n "bookkit_epub_production" }}</span>{{ end -}}
+      {{- else }}<span>{{ i18n "bookkit_epub_planned" }}</span>{{ end -}}
+      {{- if $storeAvailable }}<span>{{ i18n "bookkit_store_available" }}</span>{{ end -}}
     </p>
     {{- end }}
     {{- if and $showStores (not $cover) }}
       {{ partial "bookkit/book-store-links.html" (dict "book" $book "variant" "inline") }}
     {{- end }}
     <p class="bookkit-book-card__actions">
-      <a href="{{ $book.RelPermalink }}">Read the book →</a>
+      <a href="{{ $book.RelPermalink }}">{{ i18n "bookkit_read_book" }}</a>
       {{- with .relationURL }}<a href="{{ . }}">{{ $.relationTitle | default "Related" }}</a>{{ end -}}
     </p>
   </div>

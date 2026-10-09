@@ -1,10 +1,10 @@
 {{- with partial "bookkit/examples/lookup.html" . -}}
 <details class="bookkit-example" data-bookkit-example>
-  <summary class="bookkit-example__trigger">Example</summary>
+  <summary class="bookkit-example__trigger">{{ i18n "bookkit_example" }}</summary>
   <section class="bookkit-example__panel" aria-label="{{ .page.Title }} example">
     <div class="bookkit-example__heading"><h2>{{ .page.Title }}</h2>
-      <button type="button" data-example-close hidden>Close example</button></div>
-    <p><a href="{{ .page.RelPermalink }}">Open standalone example →</a></p>
+      <button type="button" data-example-close hidden>{{ i18n "bookkit_close_example" }}</button></div>
+    <p><a href="{{ .page.RelPermalink }}">{{ i18n "bookkit_open_example" }}</a></p>
     {{ partial "bookkit/examples/content.html" .page }}
     {{- if .page.Store.Get "bookkitHasMermaid" -}}{{- $.Store.Set "bookkitHasMermaid" true -}}{{- end -}}
   </section>

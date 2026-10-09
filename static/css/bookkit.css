@@ -352,3 +352,10 @@ img { max-width: 100%; height: auto; }
   .bookkit-prev-next { grid-template-columns: 1fr; }
   .bookkit-prev-next__next { text-align: left; }
 }
+
+/* Language navigation works in Bookkit and consumer headers. */
+.bookkit-languages { display: flex; flex-wrap: wrap; gap: .5rem; padding: .65rem 0; }
+.bookkit-languages a { padding: .25rem .6rem; border: 1px solid currentColor; border-radius: .3rem; text-decoration: none; }
+.bookkit-languages a[aria-current="page"] { font-weight: 700; text-decoration: underline; }
+html:lang(zh) { line-height: 1.8; }
+html:lang(zh) .bookkit-prose, html:lang(zh) .content { overflow-wrap: anywhere; }

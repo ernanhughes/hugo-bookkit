@@ -1,13 +1,12 @@
-{{/* Hugo creates the top-level section but not nested sections without
-     branch bundles. Generate only those nodes; author files remain real pages.
-     File access here avoids Site.Pages, unavailable during content adaptation. */}}
+{{/* Generate only example sections that exist in the current language's content tree. */}}
 {{ .EnableAllLanguages }}
-{{ if fileExists "content/examples" }}
-  {{ range readDir "content/examples" }}
+{{ $root := path.Join (.Site.Params.bookkit.contentRoot | default "content") "examples" }}
+{{ if fileExists $root }}
+  {{ range readDir $root }}
     {{ if .IsDir }}
       {{ $book := .Name }}
-      {{ if not (fileExists (printf "content/examples/%s/_index.md" $book)) }}
-        {{ $.AddPage (dict "kind" "section" "path" $book "title" (printf "%s examples" $book)) }}
+      {{ if not (fileExists (path.Join $root $book "_index.md")) }}
+        {{ $.AddPage (dict "kind" "section" "path" $book "title" (i18n "bookkit_examples_title" (dict "Book" $book))) }}
       {{ end }}
     {{ end }}
   {{ end }}
