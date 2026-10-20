@@ -1,0 +1,10 @@
+{{/* Bookkit Local Data: enhancement script. Emitted only when local data
+is enabled. Consuming sites with their own base layout include this partial
+before </body>; Bookkit's own base layout includes it too. */}}
+{{- $cfg := .Site.Params.bookkit -}}
+{{- if $cfg.features.localData }}
+<script type="module">
+  import BookkitLocal from '{{ "js/bookkit-local/index.js" | relURL }}';
+  window.BookkitLocal = BookkitLocal;
+</script>
+{{- end }}

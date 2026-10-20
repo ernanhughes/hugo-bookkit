@@ -1,3 +1,6 @@
+baseURL = "https://example.org/"
+disableKinds = ["taxonomy", "term", "rss"]
+
 [module]
   [module.hugoVersion]
     min = "0.158.0"
