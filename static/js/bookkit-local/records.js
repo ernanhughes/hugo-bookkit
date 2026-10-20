@@ -131,22 +131,13 @@ export async function listRecords(store, options = {}) {
 
     if (kind && subjectId) {
       index = objectStore.index('byNamespaceKindSubject');
-      range = IDBKeyRange.bound(
-        [store.namespace, kind, subjectId, ''],
-        [store.namespace, kind, subjectId, '\uffff']
-      );
+      range = IDBKeyRange.only([store.namespace, kind, subjectId]);
     } else if (kind) {
       index = objectStore.index('byNamespaceKind');
-      range = IDBKeyRange.bound(
-        [store.namespace, kind, ''],
-        [store.namespace, kind, '\uffff']
-      );
+      range = IDBKeyRange.only([store.namespace, kind]);
     } else if (subjectId) {
       index = objectStore.index('byNamespaceSubject');
-      range = IDBKeyRange.bound(
-        [store.namespace, subjectId, ''],
-        [store.namespace, subjectId, '\uffff']
-      );
+      range = IDBKeyRange.only([store.namespace, subjectId]);
     } else {
       index = objectStore.index('byNamespaceUpdatedAt');
       range = IDBKeyRange.bound(
@@ -179,6 +170,10 @@ export async function listRecords(store, options = {}) {
 
         if (results.length < limit) {
           results.push(record);
+        }
+        if (results.length >= limit) {
+          resolve(results);
+        } else {
           cursor.continue();
         }
       } else {
@@ -190,101 +185,75 @@ export async function listRecords(store, options = {}) {
 }
 
 export async function batchRecords(store, operations) {
-  const tx = store.db.transaction('records', 'readwrite');
-  const objectStore = tx.objectStore('records');
+  if (operations.length === 0) return;
 
-  // Pre-fetch existing records for all 'put' operations
-  const putOps = operations.filter(op => op.type === 'put' && op.record);
-  const existingRecords = await Promise.all(
-    putOps.map(op => getRecord(store, op.record.kind, op.record.id))
-  );
-
-  let completed = 0;
-  let hasError = false;
-
-  const checkComplete = () => {
-    completed++;
-    if (completed === operations.length && !hasError) {
-      tx.oncomplete = () => {
-        for (const op of operations) {
-          if (op.type === 'put' && op.record) {
-            window.dispatchEvent(new CustomEvent('bookkit:local:record-committed', {
-              detail: {
-                namespace: op.namespace || store.namespace,
-                kind: op.record.kind,
-                id: op.record.id,
-                subjectId: op.record.subjectId
-              }
-            }));
-          } else if (op.type === 'delete') {
-            window.dispatchEvent(new CustomEvent('bookkit:local:record-deleted', {
-              detail: {
-                namespace: op.namespace || store.namespace,
-                kind: op.kind,
-                id: op.id
-              }
-            }));
-          }
-        }
-        resolve();
-      }
-    };
-  };
+  for (const op of operations) {
+    if (!(op.type === 'put' && op.record) &&
+        !(op.type === 'delete' && op.kind && op.id)) {
+      throw new TypeError('Invalid batch operation');
+    }
+  }
 
   return new Promise((resolve, reject) => {
-    putOps.forEach((op, idx) => {
-      if (hasError) return;
+    const tx = store.db.transaction('records', 'readwrite');
+    const objectStore = tx.objectStore('records');
+    let failure;
 
-      const namespace = op.namespace || store.namespace;
-      const now = nowISO();
-      const existing = existingRecords[idx];
-
-      const toStore = {
-        ...op.record,
-        namespace,
-        createdAt: existing?.createdAt || now,
-        updatedAt: now,
-        revision: (existing?.revision || 0) + 1
-      };
-
-      const request = objectStore.put(toStore);
-      request.onerror = () => {
-        hasError = true;
-        reject(request.error);
-      };
-      request.onsuccess = checkComplete;
-    });
-
-    operations.filter(op => op.type === 'delete' && op.kind && op.id).forEach(op => {
-      if (hasError) return;
-
-      const namespace = op.namespace || store.namespace;
-      const request = objectStore.delete([namespace, op.kind, op.id]);
-      request.onerror = () => {
-        hasError = true;
-        reject(request.error);
-      };
-      request.onsuccess = checkComplete;
-    });
-
-    if (operations.length === 0) {
-      resolve();
-    }
-  });
-}
+    tx.oncomplete = () => {
+      for (const op of operations) {
         const namespace = op.namespace || store.namespace;
-        const request = objectStore.delete([namespace, op.kind, op.id]);
-        request.onerror = () => {
-          hasError = true;
-          reject(request.error);
-        };
-        request.onsuccess = checkComplete;
+        const isPut = op.type === 'put';
+        const detail = isPut
+          ? { namespace, kind: op.record.kind, id: op.record.id, subjectId: op.record.subjectId }
+          : { namespace, kind: op.kind, id: op.id };
+        window.dispatchEvent(new CustomEvent(isPut
+          ? 'bookkit:local:record-committed'
+          : 'bookkit:local:record-deleted', { detail }));
       }
-    }
-
-    if (operations.length === 0) {
       resolve();
-    }
+    };
+    tx.onerror = () => reject(failure || tx.error);
+    tx.onabort = () => reject(failure || tx.error || new Error('Transaction aborted'));
+
+    const abort = (error) => {
+      failure = error;
+      tx.abort();
+    };
+
+    // Queue each operation from the previous request's success handler so the
+    // transaction stays active and repeated writes see earlier batch changes.
+    const enqueue = (index) => {
+      if (index === operations.length) return;
+      const op = operations[index];
+      const namespace = op.namespace || store.namespace;
+      try {
+        if (op.type === 'delete') {
+          const request = objectStore.delete([namespace, op.kind, op.id]);
+          request.onsuccess = () => enqueue(index + 1);
+        } else {
+          const request = objectStore.get([namespace, op.record.kind, op.record.id]);
+          request.onsuccess = () => {
+            try {
+              const existing = request.result;
+              const now = nowISO();
+              const write = objectStore.put({
+                ...op.record,
+                namespace,
+                createdAt: existing?.createdAt || now,
+                updatedAt: now,
+                revision: (existing?.revision || 0) + 1
+              });
+              write.onsuccess = () => enqueue(index + 1);
+            } catch (error) {
+              abort(error);
+            }
+          };
+        }
+      } catch (error) {
+        abort(error);
+      }
+    };
+    enqueue(0);
   });
 }
 
@@ -300,22 +269,13 @@ export async function countRecords(store, options = {}) {
 
     if (kind && subjectId) {
       index = objectStore.index('byNamespaceKindSubject');
-      range = IDBKeyRange.bound(
-        [store.namespace, kind, subjectId, ''],
-        [store.namespace, kind, subjectId, '\uffff']
-      );
+      range = IDBKeyRange.only([store.namespace, kind, subjectId]);
     } else if (kind) {
       index = objectStore.index('byNamespaceKind');
-      range = IDBKeyRange.bound(
-        [store.namespace, kind, ''],
-        [store.namespace, kind, '\uffff']
-      );
+      range = IDBKeyRange.only([store.namespace, kind]);
     } else if (subjectId) {
       index = objectStore.index('byNamespaceSubject');
-      range = IDBKeyRange.bound(
-        [store.namespace, subjectId, ''],
-        [store.namespace, subjectId, '\uffff']
-      );
+      range = IDBKeyRange.only([store.namespace, subjectId]);
     } else {
       index = objectStore.index('byNamespaceUpdatedAt');
       range = IDBKeyRange.bound(
