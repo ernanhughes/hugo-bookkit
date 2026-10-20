@@ -190,65 +190,88 @@ export async function listRecords(store, options = {}) {
 }
 
 export async function batchRecords(store, operations) {
-  return new Promise((resolve, reject) => {
-    const tx = store.db.transaction('records', 'readwrite');
-    const objectStore = tx.objectStore('records');
+  const tx = store.db.transaction('records', 'readwrite');
+  const objectStore = tx.objectStore('records');
 
-    let completed = 0;
-    let hasError = false;
+  // Pre-fetch existing records for all 'put' operations
+  const putOps = operations.filter(op => op.type === 'put' && op.record);
+  const existingRecords = await Promise.all(
+    putOps.map(op => getRecord(store, op.record.kind, op.record.id))
+  );
 
-    const checkComplete = () => {
-      completed++;
-      if (completed === operations.length && !hasError) {
-        tx.oncomplete = () => {
-          for (const op of operations) {
-            if (op.type === 'put' && op.record) {
-              window.dispatchEvent(new CustomEvent('bookkit:local:record-committed', {
-                detail: {
-                  namespace: op.namespace || store.namespace,
-                  kind: op.record.kind,
-                  id: op.record.id,
-                  subjectId: op.record.subjectId
-                }
-              }));
-            } else if (op.type === 'delete') {
-              window.dispatchEvent(new CustomEvent('bookkit:local:record-deleted', {
-                detail: {
-                  namespace: op.namespace || store.namespace,
-                  kind: op.kind,
-                  id: op.id
-                }
-              }));
-            }
+  let completed = 0;
+  let hasError = false;
+
+  const checkComplete = () => {
+    completed++;
+    if (completed === operations.length && !hasError) {
+      tx.oncomplete = () => {
+        for (const op of operations) {
+          if (op.type === 'put' && op.record) {
+            window.dispatchEvent(new CustomEvent('bookkit:local:record-committed', {
+              detail: {
+                namespace: op.namespace || store.namespace,
+                kind: op.record.kind,
+                id: op.record.id,
+                subjectId: op.record.subjectId
+              }
+            }));
+          } else if (op.type === 'delete') {
+            window.dispatchEvent(new CustomEvent('bookkit:local:record-deleted', {
+              detail: {
+                namespace: op.namespace || store.namespace,
+                kind: op.kind,
+                id: op.id
+              }
+            }));
           }
-          resolve();
-        };
+        }
+        resolve();
       }
     };
+  };
 
-    for (const op of operations) {
-      if (hasError) break;
+  return new Promise((resolve, reject) => {
+    putOps.forEach((op, idx) => {
+      if (hasError) return;
 
-      if (op.type === 'put' && op.record) {
-        const namespace = op.namespace || store.namespace;
-        const now = nowISO();
-        const existing = await getRecord(store, op.record.kind, op.record.id);
+      const namespace = op.namespace || store.namespace;
+      const now = nowISO();
+      const existing = existingRecords[idx];
 
-        const toStore = {
-          ...op.record,
-          namespace,
-          createdAt: existing?.createdAt || now,
-          updatedAt: now,
-          revision: (existing?.revision || 0) + 1
-        };
+      const toStore = {
+        ...op.record,
+        namespace,
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+        revision: (existing?.revision || 0) + 1
+      };
 
-        const request = objectStore.put(toStore);
-        request.onerror = () => {
-          hasError = true;
-          reject(request.error);
-        };
-        request.onsuccess = checkComplete;
-      } else if (op.type === 'delete' && op.kind && op.id) {
+      const request = objectStore.put(toStore);
+      request.onerror = () => {
+        hasError = true;
+        reject(request.error);
+      };
+      request.onsuccess = checkComplete;
+    });
+
+    operations.filter(op => op.type === 'delete' && op.kind && op.id).forEach(op => {
+      if (hasError) return;
+
+      const namespace = op.namespace || store.namespace;
+      const request = objectStore.delete([namespace, op.kind, op.id]);
+      request.onerror = () => {
+        hasError = true;
+        reject(request.error);
+      };
+      request.onsuccess = checkComplete;
+    });
+
+    if (operations.length === 0) {
+      resolve();
+    }
+  });
+}
         const namespace = op.namespace || store.namespace;
         const request = objectStore.delete([namespace, op.kind, op.id]);
         request.onerror = () => {
