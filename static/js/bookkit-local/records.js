@@ -4,61 +4,8 @@
  * Provides CRUD and query operations on the generic record store.
  * All write operations resolve only after the IndexedDB transaction commits.
  */
-import type { DatabaseError } from './database.js';
 
-export interface RecordEnvelope<T = unknown> {
-  namespace: string;
-  kind: string;
-  id: string;
-  subjectId: string;
-  schemaVersion: number;
-  createdAt: string;
-  updatedAt: string;
-  payload: T;
-  provenance?: Provenance;
-  revision?: number;
-}
-
-export interface Provenance {
-  source: 'reader' | 'import' | 'ai-suggested' | 'external' | 'author-reviewed';
-  tool?: string;
-  importedAt?: string;
-  originalId?: string;
-}
-
-export interface ListOptions {
-  kind?: string;
-  subjectId?: string;
-  since?: string;
-  limit?: number;
-  offset?: number;
-  order?: 'asc' | 'desc';
-}
-
-export interface BatchOperation {
-  type: 'put' | 'delete';
-  record?: Omit<RecordEnvelope, 'createdAt' | 'updatedAt' | 'revision'>;
-  kind?: string;
-  id?: string;
-  namespace?: string;
-}
-
-export interface StoreConfig {
-  namespace: string;
-  databaseName?: string;
-  version?: number;
-}
-
-interface OpenStoreResult {
-  db: IDBDatabase;
-  namespace: string;
-  close: () => void;
-}
-
-/**
- * Generate a UUID v4.
- */
-function generateId(): string {
+function generateId() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
@@ -66,40 +13,25 @@ function generateId(): string {
   });
 }
 
-/**
- * Get current ISO timestamp.
- */
-function nowISO(): string {
+function nowISO() {
   return new Date().toISOString();
 }
 
-/**
- * Wrap an IDBRequest in a promise that resolves on transaction commit.
- */
-function awaitTransaction(request: IDBRequest): Promise<any> {
+function awaitTransaction(request) {
   return new Promise((resolve, reject) => {
-    const transaction = request.transaction!;
+    const transaction = request.transaction;
     transaction.oncomplete = () => resolve(request.result);
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error || new Error('Transaction aborted'));
   });
 }
 
-/**
- * Open a namespaced store.
- */
-export async function openStore(config: StoreConfig): Promise<OpenStoreResult> {
+export async function openStore(config) {
   const { openDatabase } = await import('./database.js');
   const dbName = config.databaseName || 'bookkit-local-v1';
   const version = config.version || 1;
 
-  const { db } = await openDatabase({
-    name: dbName,
-    version,
-    onUpgrade: (db, oldVersion, newVersion) => {
-      // Migrations handled separately
-    }
-  });
+  const { db } = await openDatabase({ name: dbName, version });
 
   return {
     db,
@@ -108,16 +40,7 @@ export async function openStore(config: StoreConfig): Promise<OpenStoreResult> {
   };
 }
 
-/**
- * Create a record envelope with metadata.
- */
-export function createRecord<T>(
-  namespace: string,
-  kind: string,
-  subjectId: string,
-  payload: T,
-  options: { id?: string; schemaVersion?: number; provenance?: Provenance } = {}
-): RecordEnvelope<T> {
+export function createRecord(namespace, kind, subjectId, payload, options = {}) {
   const timestamp = nowISO();
   return {
     namespace,
@@ -133,14 +56,7 @@ export function createRecord<T>(
   };
 }
 
-/**
- * Get a single record by kind and id.
- */
-export async function getRecord<T = unknown>(
-  store: OpenStoreResult,
-  kind: string,
-  id: string
-): Promise<RecordEnvelope<T> | null> {
+export async function getRecord(store, kind, id) {
   return new Promise((resolve, reject) => {
     const tx = store.db.transaction('records', 'readonly');
     const objectStore = tx.objectStore('records');
@@ -148,32 +64,25 @@ export async function getRecord<T = unknown>(
 
     request.onsuccess = () => {
       const result = request.result;
-      resolve(result ? (result as RecordEnvelope<T>) : null);
+      resolve(result ? result : null);
     };
     request.onerror = () => reject(request.error);
   });
 }
 
-/**
- * Put (upsert) a record. Resolves with the committed record including revision.
- */
-export async function putRecord<T>(
-  store: OpenStoreResult,
-  record: Omit<RecordEnvelope<T>, 'createdAt' | 'updatedAt' | 'revision'>
-): Promise<RecordEnvelope<T>> {
+export async function putRecord(store, record) {
   const namespace = store.namespace;
   const now = nowISO();
 
-  // Check if record exists to preserve createdAt and increment revision
   const existing = await getRecord(store, record.kind, record.id);
 
-  const toStore: RecordEnvelope<T> = {
+  const toStore = {
     ...record,
     namespace,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
     revision: (existing?.revision || 0) + 1
-  } as RecordEnvelope<T>;
+  };
 
   return new Promise((resolve, reject) => {
     const tx = store.db.transaction('records', 'readwrite');
@@ -181,9 +90,7 @@ export async function putRecord<T>(
     const request = objectStore.put(toStore);
 
     request.onsuccess = () => {
-      // Resolve only after transaction commits
       tx.oncomplete = () => {
-        // Dispatch event
         window.dispatchEvent(new CustomEvent('bookkit:local:record-committed', {
           detail: { namespace, kind: record.kind, id: record.id, subjectId: record.subjectId }
         }));
@@ -194,14 +101,7 @@ export async function putRecord<T>(
   });
 }
 
-/**
- * Delete a record by kind and id.
- */
-export async function deleteRecord(
-  store: OpenStoreResult,
-  kind: string,
-  id: string
-): Promise<void> {
+export async function deleteRecord(store, kind, id) {
   return new Promise((resolve, reject) => {
     const tx = store.db.transaction('records', 'readwrite');
     const objectStore = tx.objectStore('records');
@@ -219,21 +119,15 @@ export async function deleteRecord(
   });
 }
 
-/**
- * List records with filtering options.
- */
-export async function listRecords<T = unknown>(
-  store: OpenStoreResult,
-  options: ListOptions = {}
-): Promise<RecordEnvelope<T>[]> {
-  const { kind, subjectId, since, limit = 1000, offset = 0, order = 'desc' } = options;
+export async function listRecords(store, options = {}) {
+  const { kind, subjectId, since, limit = 10000, offset = 0, order = 'desc' } = options;
 
   return new Promise((resolve, reject) => {
     const tx = store.db.transaction('records', 'readonly');
     const objectStore = tx.objectStore('records');
 
-    let index: IDBIndex;
-    let range: IDBKeyRange | undefined;
+    let index;
+    let range;
 
     if (kind && subjectId) {
       index = objectStore.index('byNamespaceKindSubject');
@@ -264,15 +158,14 @@ export async function listRecords<T = unknown>(
     const direction = order === 'asc' ? 'next' : 'prev';
     const request = index.openCursor(range, direction);
 
-    const results: RecordEnvelope<T>[] = [];
+    const results = [];
     let skipped = 0;
 
     request.onsuccess = () => {
       const cursor = request.result;
       if (cursor) {
-        const record = cursor.value as RecordEnvelope<T>;
+        const record = cursor.value;
 
-        // Filter by since (updatedAt)
         if (since && record.updatedAt < since) {
           cursor.continue();
           return;
@@ -296,13 +189,7 @@ export async function listRecords<T = unknown>(
   });
 }
 
-/**
- * Execute multiple operations in a single transaction.
- */
-export async function batchRecords(
-  store: OpenStoreResult,
-  operations: BatchOperation[]
-): Promise<void> {
+export async function batchRecords(store, operations) {
   return new Promise((resolve, reject) => {
     const tx = store.db.transaction('records', 'readwrite');
     const objectStore = tx.objectStore('records');
@@ -313,9 +200,7 @@ export async function batchRecords(
     const checkComplete = () => {
       completed++;
       if (completed === operations.length && !hasError) {
-        // Wait for transaction commit
         tx.oncomplete = () => {
-          // Dispatch events for each put/delete
           for (const op of operations) {
             if (op.type === 'put' && op.record) {
               window.dispatchEvent(new CustomEvent('bookkit:local:record-committed', {
@@ -349,7 +234,7 @@ export async function batchRecords(
         const now = nowISO();
         const existing = await getRecord(store, op.record.kind, op.record.id);
 
-        const toStore: RecordEnvelope = {
+        const toStore = {
           ...op.record,
           namespace,
           createdAt: existing?.createdAt || now,
@@ -380,21 +265,15 @@ export async function batchRecords(
   });
 }
 
-/**
- * Count records matching criteria.
- */
-export async function countRecords(
-  store: OpenStoreResult,
-  options: { kind?: string; subjectId?: string } = {}
-): Promise<number> {
+export async function countRecords(store, options = {}) {
   const { kind, subjectId } = options;
 
   return new Promise((resolve, reject) => {
     const tx = store.db.transaction('records', 'readonly');
     const objectStore = tx.objectStore('records');
 
-    let index: IDBIndex;
-    let range: IDBKeyRange | undefined;
+    let index;
+    let range;
 
     if (kind && subjectId) {
       index = objectStore.index('byNamespaceKindSubject');
@@ -428,10 +307,7 @@ export async function countRecords(
   });
 }
 
-/**
- * Clear all records in a namespace (use with caution).
- */
-export async function clearNamespace(store: OpenStoreResult): Promise<void> {
+export async function clearNamespace(store) {
   return new Promise((resolve, reject) => {
     const tx = store.db.transaction('records', 'readwrite');
     const objectStore = tx.objectStore('records');

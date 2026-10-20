@@ -5,78 +5,42 @@
  * Events contain only metadata (IDs, namespace), never full record payloads.
  */
 
-export type LocalEventType =
-  | 'bookkit:local:ready'
-  | 'bookkit:local:record-committed'
-  | 'bookkit:local:record-deleted'
-  | 'bookkit:local:storage-error'
-  | 'bookkit:local:version-blocked'
-  | 'bookkit:local:version-change';
+export const EventTypes = {
+  READY: 'bookkit:local:ready',
+  RECORD_COMMITTED: 'bookkit:local:record-committed',
+  RECORD_DELETED: 'bookkit:local:record-deleted',
+  STORAGE_ERROR: 'bookkit:local:storage-error',
+  VERSION_BLOCKED: 'bookkit:local:version-blocked',
+  VERSION_CHANGE: 'bookkit:local:version-change'
+};
 
-export interface LocalEventMap {
-  'bookkit:local:ready': { namespace: string; databaseName: string };
-  'bookkit:local:record-committed': { namespace: string; kind: string; id: string; subjectId: string };
-  'bookkit:local:record-deleted': { namespace: string; kind: string; id: string; subjectId?: string };
-  'bookkit:local:storage-error': { namespace: string; error: string; operation: string };
-  'bookkit:local:version-blocked': { databaseName: string; oldVersion: number; newVersion: number };
-  'bookkit:local:version-change': { databaseName: string };
-}
-
-/**
- * Typed event listener.
- */
-export type LocalEventListener<K extends LocalEventType> = (event: CustomEvent<LocalEventMap[K]>) => void;
-
-/**
- * Subscribe to a local data event.
- * Returns an unsubscribe function.
- */
-export function on<K extends LocalEventType>(
-  type: K,
-  listener: LocalEventListener<K>
-): () => void {
-  const handler = (event: Event) => listener(event as CustomEvent<LocalEventMap[K]>);
+export function on(type, listener) {
+  const handler = (event) => listener(event);
   window.addEventListener(type, handler);
   return () => window.removeEventListener(type, handler);
 }
 
-/**
- * Subscribe once to a local data event.
- */
-export function once<K extends LocalEventType>(
-  type: K,
-  listener: LocalEventListener<K>
-): () => void {
-  const handler = (event: Event) => {
-    listener(event as CustomEvent<LocalEventMap[K]>);
+export function once(type, listener) {
+  const handler = (event) => {
+    listener(event);
     window.removeEventListener(type, handler);
   };
   window.addEventListener(type, handler);
   return () => window.removeEventListener(type, handler);
 }
 
-/**
- * Emit a local data event (internal use).
- */
-export function emit<K extends LocalEventType>(
-  type: K,
-  detail: LocalEventMap[K]
-): boolean {
+export function emit(type, detail) {
   const event = new CustomEvent(type, { detail });
   return window.dispatchEvent(event);
 }
 
-/**
- * Wait for the database to be ready for a namespace.
- * Resolves when 'bookkit:local:ready' fires for the namespace.
- */
-export function waitForReady(namespace: string, timeoutMs = 5000): Promise<void> {
+export function waitForReady(namespace, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new Error(`Timeout waiting for ${namespace} database ready`));
     }, timeoutMs);
 
-    const unsubscribe = on('bookkit:local:ready', (event) => {
+    const unsubscribe = on(EventTypes.READY, (event) => {
       if (event.detail.namespace === namespace) {
         clearTimeout(timer);
         unsubscribe();
@@ -86,54 +50,28 @@ export function waitForReady(namespace: string, timeoutMs = 5000): Promise<void>
   });
 }
 
-/**
- * Listen for storage errors in a namespace.
- */
-export function onStorageError(
-  namespace: string,
-  listener: (error: string, operation: string) => void
-): () => void {
-  return on('bookkit:local:storage-error', (event) => {
+export function onStorageError(namespace, listener) {
+  return on(EventTypes.STORAGE_ERROR, (event) => {
     if (event.detail.namespace === namespace) {
       listener(event.detail.error, event.detail.operation);
     }
   });
 }
 
-/**
- * Listen for version blocked (upgrade blocked by another tab).
- */
-export function onVersionBlocked(
-  listener: (oldVersion: number, newVersion: number) => void
-): () => void {
-  return on('bookkit:local:version-blocked', (event) => {
+export function onVersionBlocked(listener) {
+  return on(EventTypes.VERSION_BLOCKED, (event) => {
     listener(event.detail.oldVersion, event.detail.newVersion);
   });
 }
 
-/**
- * Listen for version change (another tab upgraded the database).
- */
-export function onVersionChange(
-  listener: (databaseName: string) => void
-): () => void {
-  return on('bookkit:local:version-change', (event) => {
+export function onVersionChange(listener) {
+  return on(EventTypes.VERSION_CHANGE, (event) => {
     listener(event.detail.databaseName);
   });
 }
 
-/**
- * Debug: log all local events to console.
- */
-export function enableDebugLogging(): () => void {
-  const types: LocalEventType[] = [
-    'bookkit:local:ready',
-    'bookkit:local:record-committed',
-    'bookkit:local:record-deleted',
-    'bookkit:local:storage-error',
-    'bookkit:local:version-blocked',
-    'bookkit:local:version-change'
-  ];
+export function enableDebugLogging() {
+  const types = Object.values(EventTypes);
 
   const unsubscribers = types.map(type =>
     on(type, (event) => {

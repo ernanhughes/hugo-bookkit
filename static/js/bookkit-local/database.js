@@ -4,49 +4,39 @@
  * Manages IndexedDB connection, versioned schema, upgrades, and connection lifecycle.
  * All operations are async and return promises that resolve only after transactions commit.
  */
-export const DatabaseError = class DatabaseError extends Error {
-  constructor(message, public readonly code: string, public readonly cause?: Error) {
+export class DatabaseError extends Error {
+  constructor(message, code, cause) {
     super(message);
     this.name = 'DatabaseError';
+    this.code = code;
+    this.cause = cause;
   }
-};
+}
 
-export const UpgradeBlockedError = class UpgradeBlockedError extends DatabaseError {
-  constructor(public readonly oldVersion: number, public readonly newVersion: number) {
+export class UpgradeBlockedError extends DatabaseError {
+  constructor(oldVersion, newVersion) {
     super(
       `Database upgrade from v${oldVersion} to v${newVersion} blocked by open connection in another tab`,
       'UPGRADE_BLOCKED'
     );
     this.name = 'UpgradeBlockedError';
+    this.oldVersion = oldVersion;
+    this.newVersion = newVersion;
   }
-};
+}
 
-export const StorageUnavailableError = class StorageUnavailableError extends DatabaseError {
-  constructor(reason: string) {
+export class StorageUnavailableError extends DatabaseError {
+  constructor(reason) {
     super(`Browser storage unavailable: ${reason}`, 'STORAGE_UNAVAILABLE');
     this.name = 'StorageUnavailableError';
   }
-};
+}
 
-export const QuotaExceededError = class QuotaExceededError extends DatabaseError {
+export class QuotaExceededError extends DatabaseError {
   constructor() {
     super('Storage quota exceeded', 'QUOTA_EXCEEDED');
     this.name = 'QuotaExceededError';
   }
-};
-
-interface DatabaseConfig {
-  name: string;
-  version: number;
-  onUpgrade?: (db: IDBDatabase, oldVersion: number, newVersion: number) => void | Promise<void>;
-  onBlocked?: (oldVersion: number, newVersion: number) => void;
-  onVersionChange?: () => void;
-}
-
-interface OpenResult {
-  db: IDBDatabase;
-  upgraded: boolean;
-  previousVersion: number;
 }
 
 const DEFAULT_DB_NAME = 'bookkit-local-v1';
@@ -55,11 +45,7 @@ const DEFAULT_VERSION = 1;
 /**
  * Check if IndexedDB is available and functional.
  */
-export async function checkAvailability(): Promise<{
-  available: boolean;
-  reason?: string;
-  estimate?: StorageEstimate;
-}> {
+export async function checkAvailability() {
   if (typeof indexedDB === 'undefined') {
     return { available: false, reason: 'IndexedDB not supported' };
   }
@@ -67,7 +53,7 @@ export async function checkAvailability(): Promise<{
   // Probe with a temporary database
   try {
     const probeName = '__bookkit_probe__';
-    await new Promise<void>((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const req = indexedDB.open(probeName, 1);
       req.onupgradeneeded = () => {
         req.result.createObjectStore('probe');
@@ -89,7 +75,7 @@ export async function checkAvailability(): Promise<{
   }
 
   // Get storage estimate if available
-  let estimate: StorageEstimate | undefined;
+  let estimate;
   if (navigator.storage?.estimate) {
     try {
       estimate = await navigator.storage.estimate();
@@ -105,7 +91,7 @@ export async function checkAvailability(): Promise<{
  * Open or create the database with versioned schema.
  * Returns the database connection and upgrade status.
  */
-export async function openDatabase(config: DatabaseConfig = {}): Promise<OpenResult> {
+export async function openDatabase(config = {}) {
   const name = config.name || DEFAULT_DB_NAME;
   const version = config.version || DEFAULT_VERSION;
 
@@ -132,13 +118,10 @@ export async function openDatabase(config: DatabaseConfig = {}): Promise<OpenRes
         try {
           const result = config.onUpgrade(db, oldVersion, newVersion);
           if (result instanceof Promise) {
-            // Note: IDB upgrade transactions don't await promises.
-            // Custom upgrades must be synchronous or use the transaction directly.
             console.warn('[bookkit-local] onUpgrade returned a promise; it may not be awaited by IndexedDB');
           }
         } catch (error) {
           console.error('[bookkit-local] Upgrade failed:', error);
-          // Abort the upgrade by throwing
           request.transaction?.abort();
           throw error;
         }
@@ -149,7 +132,6 @@ export async function openDatabase(config: DatabaseConfig = {}): Promise<OpenRes
       if (config.onBlocked) {
         config.onBlocked(event.oldVersion, event.newVersion);
       } else {
-        // Default: notify via event for UI to handle
         const blockedEvent = new CustomEvent('bookkit:local:version-blocked', {
           detail: { databaseName: name, oldVersion: event.oldVersion, newVersion: event.newVersion }
         });
@@ -161,7 +143,6 @@ export async function openDatabase(config: DatabaseConfig = {}): Promise<OpenRes
       const db = request.result;
       const upgraded = db.version > (event.oldVersion || 0);
 
-      // Handle versionchange from other tabs
       db.onversionchange = () => {
         if (config.onVersionChange) {
           config.onVersionChange();
@@ -170,7 +151,6 @@ export async function openDatabase(config: DatabaseConfig = {}): Promise<OpenRes
             detail: { databaseName: name }
           });
           window.dispatchEvent(vcEvent);
-          // Close to allow the upgrade to proceed
           db.close();
         }
       };
@@ -190,7 +170,7 @@ export async function openDatabase(config: DatabaseConfig = {}): Promise<OpenRes
         reject(new DatabaseError(
           error?.message || 'Failed to open database',
           'OPEN_FAILED',
-          error ?? undefined
+          error
         ));
       }
     };
@@ -200,24 +180,21 @@ export async function openDatabase(config: DatabaseConfig = {}): Promise<OpenRes
 /**
  * Create the version 1 schema.
  */
-function createSchemaV1(db: IDBDatabase): void {
-  // Records store: compound key [namespace, kind, id]
+function createSchemaV1(db) {
   const recordsStore = db.createObjectStore('records', { keyPath: ['namespace', 'kind', 'id'] });
 
-  // Indexes for common query patterns
   recordsStore.createIndex('byNamespaceSubject', ['namespace', 'subjectId'], { unique: false });
   recordsStore.createIndex('byNamespaceKind', ['namespace', 'kind'], { unique: false });
   recordsStore.createIndex('byNamespaceKindSubject', ['namespace', 'kind', 'subjectId'], { unique: false });
   recordsStore.createIndex('byNamespaceUpdatedAt', ['namespace', 'updatedAt'], { unique: false });
 
-  // Metadata store for platform-level data
   db.createObjectStore('metadata', { keyPath: 'key' });
 }
 
 /**
  * Close a database connection cleanly.
  */
-export function closeDatabase(db: IDBDatabase): void {
+export function closeDatabase(db) {
   if (db && db.objectStoreNames.length > 0) {
     db.close();
   }
@@ -225,19 +202,18 @@ export function closeDatabase(db: IDBDatabase): void {
 
 /**
  * Delete the database entirely.
- * Use with caution — this destroys all data.
  */
-export function deleteDatabase(name: string = DEFAULT_DB_NAME): Promise<void> {
+export function deleteDatabase(name = DEFAULT_DB_NAME) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(name);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(new DatabaseError(
       request.error?.message || 'Failed to delete database',
       'DELETE_FAILED',
-      request.error ?? undefined
+      request.error
     ));
     request.onblocked = () => {
-      reject(new UpgradeBlockedError(0, 0)); // Version unknown on delete
+      reject(new UpgradeBlockedError(0, 0));
     };
   });
 }
@@ -245,7 +221,7 @@ export function deleteDatabase(name: string = DEFAULT_DB_NAME): Promise<void> {
 /**
  * Get storage usage estimate.
  */
-export async function getStorageEstimate(): Promise<StorageEstimate | null> {
+export async function getStorageEstimate() {
   if (navigator.storage?.estimate) {
     try {
       return await navigator.storage.estimate();
@@ -257,10 +233,9 @@ export async function getStorageEstimate(): Promise<StorageEstimate | null> {
 }
 
 /**
- * Request persistent storage (user gesture required in some browsers).
- * Returns true if granted, false if denied or unavailable.
+ * Request persistent storage.
  */
-export async function requestPersistence(): Promise<boolean> {
+export async function requestPersistence() {
   if (navigator.storage?.persist) {
     try {
       return await navigator.storage.persist();
@@ -274,7 +249,7 @@ export async function requestPersistence(): Promise<boolean> {
 /**
  * Check if storage is persisted.
  */
-export async function isPersisted(): Promise<boolean> {
+export async function isPersisted() {
   if (navigator.storage?.persisted) {
     try {
       return await navigator.storage.persisted();

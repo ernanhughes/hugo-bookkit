@@ -3,85 +3,21 @@
  *
  * Main entry point for consumers. Provides a simple, documented async interface.
  */
-import type { RecordEnvelope, Provenance, ListOptions, BatchOperation } from './records.js';
-import type { ExportFormat, ImportOptions, ImportResult } from './portability.js';
-import type { DatabaseError, StorageUnavailableError, QuotaExceededError, UpgradeBlockedError } from './database.js';
 
-// Re-export types
-export type {
-  RecordEnvelope,
-  Provenance,
-  ListOptions,
-  BatchOperation,
-  ExportFormat,
-  ImportOptions,
-  ImportResult,
-  DatabaseError,
-  StorageUnavailableError,
-  QuotaExceededError,
-  UpgradeBlockedError
-};
-
-// Re-export errors
 export { DatabaseError, StorageUnavailableError, QuotaExceededError, UpgradeBlockedError } from './database.js';
+export { registerMigration, getMigrations, runMigrations, getCurrentVersion, getDatabaseInfo, migrateWithUserNotification } from './migrations.js';
+export { on, once, emit, waitForReady, onStorageError, onVersionBlocked, onVersionChange, enableDebugLogging, EventTypes } from './events.js';
+export { exportRecords, exportAndDownload, importRecords, importFromFile, exportToMarkdown, exportMarkdownAndDownload } from './portability.js';
+export { openStore, createRecord, getRecord, putRecord, deleteRecord, listRecords, batchRecords, countRecords, clearNamespace } from './records.js';
 
-interface OpenOptions {
-  namespace: string;
-  databaseName?: string;
-  version?: number;
-}
+let currentStore = null;
 
-interface StoreInstance {
-  namespace: string;
-  databaseName: string;
-  version: number;
-
-  // CRUD
-  get<T = unknown>(kind: string, id: string): Promise<RecordEnvelope<T> | null>;
-  put<T>(record: Omit<RecordEnvelope<T>, 'createdAt' | 'updatedAt' | 'revision'>): Promise<RecordEnvelope<T>>;
-  delete(kind: string, id: string): Promise<void>;
-
-  // Query
-  list<T = unknown>(options?: ListOptions): Promise<RecordEnvelope<T>[]>;
-
-  // Batch
-  batch(operations: BatchOperation[]): Promise<void>;
-
-  // Count
-  count(options?: { kind?: string; subjectId?: string }): Promise<number>;
-
-  // Portability
-  export(options?: { kinds?: string[]; subjectIds?: string[] }): Promise<ExportFormat>;
-  exportAndDownload(options?: { kinds?: string[]; subjectIds?: string[]; filename?: string }): Promise<void>;
-  import(data: unknown, options?: ImportOptions): Promise<ImportResult>;
-  importFromFile(file: File, options?: ImportOptions): Promise<ImportResult>;
-  exportToMarkdown(subjectId: string): Promise<string>;
-  exportMarkdownAndDownload(subjectId: string, filename?: string): Promise<void>;
-
-  // Lifecycle
-  close(): Promise<void>;
-}
-
-interface BookkitLocalAPI {
-  open(options: OpenOptions): Promise<StoreInstance>;
-  checkAvailability(): Promise<{ available: boolean; reason?: string; estimate?: StorageEstimate }>;
-  requestPersistence(): Promise<boolean>;
-  isPersisted(): Promise<boolean>;
-  deleteDatabase(name?: string): Promise<void>;
-  getStorageEstimate(): Promise<StorageEstimate | null>;
-}
-
-// Internal store holder
-let currentStore: StoreInstance | null = null;
-
-/**
- * Create a store instance with bound methods.
- */
-async function createStoreInstance(options: OpenOptions): Promise<StoreInstance> {
+async function createStoreInstance(options) {
   const { openDatabase } = await import('./database.js');
   const { openStore } = await import('./records.js');
   const { exportRecords, exportAndDownload, importRecords, importFromFile, exportToMarkdown, exportMarkdownAndDownload } = await import('./portability.js');
   const { getRecord, putRecord, deleteRecord, listRecords, batchRecords, countRecords } = await import('./records.js');
+  const { emit } = await import('./events.js');
 
   const dbName = options.databaseName || 'bookkit-local-v1';
   const version = options.version || 1;
@@ -89,60 +25,58 @@ async function createStoreInstance(options: OpenOptions): Promise<StoreInstance>
   const { db } = await openDatabase({ name: dbName, version });
   const store = await openStore({ ...options, databaseName: dbName, version });
 
-  // Dispatch ready event
-  const { emit } = await import('./events.js');
   emit('bookkit:local:ready', { namespace: options.namespace, databaseName: dbName });
 
-  const instance: StoreInstance = {
+  const instance = {
     namespace: options.namespace,
     databaseName: dbName,
     version,
 
-    async get<T>(kind: string, id: string) {
-      return getRecord(store, kind, id) as Promise<RecordEnvelope<T> | null>;
+    async get(kind, id) {
+      return getRecord(store, kind, id);
     },
 
-    async put<T>(record: Omit<RecordEnvelope<T>, 'createdAt' | 'updatedAt' | 'revision'>) {
-      return putRecord(store, record) as Promise<RecordEnvelope<T>>;
+    async put(record) {
+      return putRecord(store, record);
     },
 
-    async delete(kind: string, id: string) {
+    async delete(kind, id) {
       return deleteRecord(store, kind, id);
     },
 
-    async list<T>(options?: ListOptions) {
-      return listRecords(store, options) as Promise<RecordEnvelope<T>[]>;
+    async list(options) {
+      return listRecords(store, options);
     },
 
-    async batch(operations: BatchOperation[]) {
+    async batch(operations) {
       return batchRecords(store, operations);
     },
 
-    async count(options?: { kind?: string; subjectId?: string }) {
+    async count(options) {
       return countRecords(store, options);
     },
 
-    async export(options?: { kinds?: string[]; subjectIds?: string[] }) {
+    async export(options) {
       return exportRecords(store, options);
     },
 
-    async exportAndDownload(options?: { kinds?: string[]; subjectIds?: string[]; filename?: string }) {
+    async exportAndDownload(options) {
       return exportAndDownload(store, options);
     },
 
-    async import(data: unknown, options?: ImportOptions) {
+    async import(data, options) {
       return importRecords(store, data, options);
     },
 
-    async importFromFile(file: File, options?: ImportOptions) {
+    async importFromFile(file, options) {
       return importFromFile(store, file, options);
     },
 
-    async exportToMarkdown(subjectId: string) {
+    async exportToMarkdown(subjectId) {
       return exportToMarkdown(store, subjectId);
     },
 
-    async exportMarkdownAndDownload(subjectId: string, filename?: string) {
+    async exportMarkdownAndDownload(subjectId, filename) {
       return exportMarkdownAndDownload(store, subjectId, filename);
     },
 
@@ -155,15 +89,8 @@ async function createStoreInstance(options: OpenOptions): Promise<StoreInstance>
   return instance;
 }
 
-/**
- * Main BookkitLocal API object.
- */
-const BookkitLocal: BookkitLocalAPI = {
-  /**
-   * Open a namespaced data store.
-   * Initializes IndexedDB, runs migrations, and returns a store instance.
-   */
-  async open(options: OpenOptions): Promise<StoreInstance> {
+const BookkitLocal = {
+  async open(options) {
     if (currentStore && currentStore.namespace === options.namespace) {
       return currentStore;
     }
@@ -173,55 +100,35 @@ const BookkitLocal: BookkitLocalAPI = {
     return instance;
   },
 
-  /**
-   * Check if IndexedDB is available and functional.
-   */
   async checkAvailability() {
     const { checkAvailability } = await import('./database.js');
     return checkAvailability();
   },
 
-  /**
-   * Request persistent storage (requires user gesture in some browsers).
-   */
   async requestPersistence() {
     const { requestPersistence } = await import('./database.js');
     return requestPersistence();
   },
 
-  /**
-   * Check if storage is currently persisted.
-   */
   async isPersisted() {
     const { isPersisted } = await import('./database.js');
     return isPersisted();
   },
 
-  /**
-   * Delete the database entirely. Use with caution.
-   */
-  async deleteDatabase(name?: string) {
+  async deleteDatabase(name) {
     const { deleteDatabase } = await import('./database.js');
     return deleteDatabase(name);
   },
 
-  /**
-   * Get storage usage estimate.
-   */
   async getStorageEstimate() {
     const { getStorageEstimate } = await import('./database.js');
     return getStorageEstimate();
   }
 };
 
-// Export as default for ES module consumers
 export default BookkitLocal;
-
-// Also export as named export for compatibility
 export { BookkitLocal };
 
-// Global registration for non-module scripts (optional)
-// Only register if not using modules
 if (typeof window !== 'undefined' && !window.BookkitLocal) {
   window.BookkitLocal = BookkitLocal;
 }

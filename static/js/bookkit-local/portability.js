@@ -3,44 +3,11 @@
  *
  * Provides portable, versioned JSON export/import with validation.
  */
-import type { RecordEnvelope } from './records.js';
-
-export interface ExportFormat {
-  format: 'bookkit-local-export';
-  version: number;
-  exportedAt: string;
-  origin: {
-    namespace: string;
-    application?: string;
-  };
-  subjects: string[];
-  kinds: string[];
-  records: RecordEnvelope[];
-  integrity: {
-    recordCount: number;
-    checksum: string;
-  };
-}
-
-export interface ImportOptions {
-  policy: 'merge' | 'replace' | 'skip';
-  namespace?: string; // Override namespace on import
-}
-
-export interface ImportResult {
-  imported: number;
-  skipped: number;
-  rejected: number;
-  errors: Array<{ record: RecordEnvelope; error: string }>;
-}
 
 const EXPORT_FORMAT = 'bookkit-local-export';
 const EXPORT_VERSION = 1;
 
-/**
- * Compute a simple checksum for integrity verification.
- */
-async function computeChecksum(records: RecordEnvelope[]): Promise<string> {
+async function computeChecksum(records) {
   const data = JSON.stringify(records.map(r => ({
     namespace: r.namespace,
     kind: r.kind,
@@ -58,34 +25,28 @@ async function computeChecksum(records: RecordEnvelope[]): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * Validate an export format object.
- */
-function validateExportFormat(data: unknown): data is ExportFormat {
+function validateExportFormat(data) {
   if (!data || typeof data !== 'object') return false;
-  const obj = data as Record<string, unknown>;
+  const obj = data;
   return (
     obj.format === EXPORT_FORMAT &&
     typeof obj.version === 'number' &&
     obj.version >= 1 &&
     typeof obj.exportedAt === 'string' &&
     obj.origin && typeof obj.origin === 'object' &&
-    typeof (obj.origin as Record<string, unknown>).namespace === 'string' &&
+    typeof obj.origin.namespace === 'string' &&
     Array.isArray(obj.subjects) &&
     Array.isArray(obj.kinds) &&
     Array.isArray(obj.records) &&
     obj.integrity && typeof obj.integrity === 'object' &&
-    typeof (obj.integrity as Record<string, unknown>).recordCount === 'number' &&
-    typeof (obj.integrity as Record<string, unknown>).checksum === 'string'
+    typeof obj.integrity.recordCount === 'number' &&
+    typeof obj.integrity.checksum === 'string'
   );
 }
 
-/**
- * Validate a single record envelope.
- */
-function validateRecord(record: unknown): record is RecordEnvelope {
+function validateRecord(record) {
   if (!record || typeof record !== 'object') return false;
-  const r = record as Record<string, unknown>;
+  const r = record;
   return (
     typeof r.namespace === 'string' &&
     typeof r.kind === 'string' &&
@@ -98,27 +59,20 @@ function validateRecord(record: unknown): record is RecordEnvelope {
   );
 }
 
-/**
- * Export records to a portable JSON format.
- */
-export async function exportRecords(
-  store: { db: IDBDatabase; namespace: string },
-  options: { kinds?: string[]; subjectIds?: string[] } = {}
-): Promise<ExportFormat> {
+export async function exportRecords(store, options = {}) {
   const { listRecords } = await import('./records.js');
   const records = await listRecords(store, {
-    kind: options.kinds?.[0], // listRecords only supports single kind; we'll filter after
+    kind: options.kinds?.[0],
     subjectId: options.subjectIds?.[0],
     limit: 100000
   });
 
-  // Filter by kinds and subjectIds if specified
   let filtered = records;
   if (options.kinds && options.kinds.length > 0) {
-    filtered = filtered.filter(r => options.kinds!.includes(r.kind));
+    filtered = filtered.filter(r => options.kinds.includes(r.kind));
   }
   if (options.subjectIds && options.subjectIds.length > 0) {
-    filtered = filtered.filter(r => options.subjectIds!.includes(r.subjectId));
+    filtered = filtered.filter(r => options.subjectIds.includes(r.subjectId));
   }
 
   const subjects = [...new Set(filtered.map(r => r.subjectId))];
@@ -143,13 +97,7 @@ export async function exportRecords(
   };
 }
 
-/**
- * Export records and trigger a download.
- */
-export async function exportAndDownload(
-  store: { db: IDBDatabase; namespace: string },
-  options: { kinds?: string[]; subjectIds?: string[]; filename?: string } = {}
-): Promise<void> {
+export async function exportAndDownload(store, options = {}) {
   const exportData = await exportRecords(store, options);
   const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -166,49 +114,38 @@ export async function exportAndDownload(
   URL.revokeObjectURL(url);
 }
 
-/**
- * Import records from a portable JSON format.
- */
-export async function importRecords(
-  store: { db: IDBDatabase; namespace: string },
-  data: unknown,
-  options: ImportOptions = { policy: 'merge' }
-): Promise<ImportResult> {
+export async function importRecords(store, data, options = { policy: 'merge' }) {
   const { putRecord, getRecord } = await import('./records.js');
 
   if (!validateExportFormat(data)) {
     throw new Error('Invalid export format: not a valid bookkit-local export');
   }
 
-  // Verify checksum
   const checksum = await computeChecksum(data.records);
   if (checksum !== data.integrity.checksum) {
     throw new Error('Import integrity check failed: checksum mismatch');
   }
 
-  // Check version compatibility
   if (data.version > EXPORT_VERSION) {
     throw new Error(`Unsupported export version ${data.version} (max ${EXPORT_VERSION})`);
   }
 
   const targetNamespace = options.namespace || store.namespace;
-  const result: ImportResult = { imported: 0, skipped: 0, rejected: 0, errors: [] };
+  const result = { imported: 0, skipped: 0, rejected: 0, errors: [] };
 
   for (const record of data.records) {
     if (!validateRecord(record)) {
       result.rejected++;
-      result.errors.push({ record: record as RecordEnvelope, error: 'Invalid record structure' });
+      result.errors.push({ record, error: 'Invalid record structure' });
       continue;
     }
 
-    // Namespace check
     if (record.namespace !== data.origin.namespace && !options.namespace) {
       result.rejected++;
       result.errors.push({ record, error: `Namespace mismatch: ${record.namespace} !== ${data.origin.namespace}` });
       continue;
     }
 
-    // Apply namespace override if specified
     const recordToImport = options.namespace
       ? { ...record, namespace: options.namespace }
       : record;
@@ -225,11 +162,9 @@ export async function importRecords(
             result.skipped++;
             continue;
           case 'replace':
-            // Always replace
             break;
           case 'merge':
           default:
-            // Newer wins
             if (incomingTime <= existingTime) {
               result.skipped++;
               continue;
@@ -252,16 +187,9 @@ export async function importRecords(
   return result;
 }
 
-/**
- * Import from a file input.
- */
-export async function importFromFile(
-  store: { db: IDBDatabase; namespace: string },
-  file: File,
-  options: ImportOptions = { policy: 'merge' }
-): Promise<ImportResult> {
+export async function importFromFile(store, file, options = { policy: 'merge' }) {
   const text = await file.text();
-  let data: unknown;
+  let data;
   try {
     data = JSON.parse(text);
   } catch {
@@ -270,14 +198,7 @@ export async function importFromFile(
   return importRecords(store, data, options);
 }
 
-/**
- * Export to Markdown (for research workspace).
- * This is a research-specific convenience, not generic.
- */
-export async function exportToMarkdown(
-  store: { db: IDBDatabase; namespace: string },
-  subjectId: string
-): Promise<string> {
+export async function exportToMarkdown(store, subjectId) {
   const { listRecords } = await import('./records.js');
 
   const [notes, sources, runs, proposals] = await Promise.all([
@@ -287,7 +208,7 @@ export async function exportToMarkdown(
     listRecords(store, { kind: 'proposal', subjectId })
   ]);
 
-  const lines: string[] = [];
+  const lines = [];
   lines.push(`# Research Workspace: ${subjectId}`);
   lines.push(`Exported: ${new Date().toISOString()}`);
   lines.push('');
@@ -295,7 +216,7 @@ export async function exportToMarkdown(
   if (notes.length) {
     lines.push('## Notes');
     for (const note of notes) {
-      const payload = note.payload as { text?: string; [key: string]: unknown };
+      const payload = note.payload;
       lines.push(`### ${note.id} (${note.updatedAt})`);
       lines.push(payload.text || '');
       lines.push('');
@@ -305,7 +226,7 @@ export async function exportToMarkdown(
   if (sources.length) {
     lines.push('## Sources');
     for (const source of sources) {
-      const payload = source.payload as { url?: string; title?: string; readingStatus?: string; notes?: string };
+      const payload = source.payload;
       lines.push(`### ${source.id}`);
       lines.push(`- **URL:** ${payload.url || 'N/A'}`);
       lines.push(`- **Title:** ${payload.title || 'N/A'}`);
@@ -318,7 +239,7 @@ export async function exportToMarkdown(
   if (runs.length) {
     lines.push('## Research Runs');
     for (const run of runs) {
-      const payload = run.payload as { status?: string; method?: string; summary?: string; chapterFingerprint?: string };
+      const payload = run.payload;
       lines.push(`### ${run.id} (${run.updatedAt})`);
       lines.push(`- **Status:** ${payload.status || 'N/A'}`);
       lines.push(`- **Method:** ${payload.method || 'N/A'}`);
@@ -331,7 +252,7 @@ export async function exportToMarkdown(
   if (proposals.length) {
     lines.push('## Proposals');
     for (const proposal of proposals) {
-      const payload = proposal.payload as { title?: string; rationale?: string; status?: string };
+      const payload = proposal.payload;
       lines.push(`### ${proposal.id} (${proposal.updatedAt})`);
       lines.push(`- **Title:** ${payload.title || 'N/A'}`);
       lines.push(`- **Status:** ${payload.status || 'draft'}`);
@@ -343,14 +264,7 @@ export async function exportToMarkdown(
   return lines.join('\n');
 }
 
-/**
- * Export to Markdown and trigger download.
- */
-export async function exportMarkdownAndDownload(
-  store: { db: IDBDatabase; namespace: string },
-  subjectId: string,
-  filename?: string
-): Promise<void> {
+export async function exportMarkdownAndDownload(store, subjectId, filename) {
   const markdown = await exportToMarkdown(store, subjectId);
   const blob = new Blob([markdown], { type: 'text/markdown' });
   const url = URL.createObjectURL(blob);
