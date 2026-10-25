@@ -1,7 +1,7 @@
-{{/* Bookkit Local Data: stylesheet link. Emitted only when the local data
-feature is enabled. Consuming sites with their own base layout include
-this partial in <head>; Bookkit's own base layout includes it too. */}}
-{{- $cfg := .Site.Params.bookkit -}}
-{{- if and $cfg.features.localData (not $.Site.Params.bookkit.localData.disableStyles) }}
+{{/* Bookkit Local Data: optional status badge styles. The database runtime
+itself is loaded by local-data/body-assets.html only on opt-in pages. */}}
+{{- $cfg := .Site.Params.bookkit | default dict -}}
+{{- $features := $cfg.features | default dict -}}
+{{- if and $features.localData .Params.bookkit_local_data -}}
 <link rel="stylesheet" href="{{ "css/bookkit-local.css" | relURL }}">
-{{- end }}
+{{- end -}}

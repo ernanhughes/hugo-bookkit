@@ -1,261 +1,371 @@
 /**
- * Bookkit Local Data Platform — Database Lifecycle
+ * Bookkit Local Data Platform - database lifecycle.
  *
- * Manages IndexedDB connection, versioned schema, upgrades, and connection lifecycle.
- * All operations are async and return promises that resolve only after transactions commit.
+ * One connection is shared by every namespace in a page. Namespaces are rows
+ * in the generic record store, not separate databases. A version-change event
+ * closes the connection so a newer tab can upgrade without being blocked
+ * forever; the stale page must reload.
  */
-export class DatabaseError extends Error {
-  constructor(message, code, cause) {
-    super(message);
-    this.name = 'DatabaseError';
-    this.code = code;
-    this.cause = cause;
-  }
-}
 
-export class UpgradeBlockedError extends DatabaseError {
-  constructor(oldVersion, newVersion) {
-    super(
-      `Database upgrade from v${oldVersion} to v${newVersion} blocked by open connection in another tab`,
-      'UPGRADE_BLOCKED'
+import {
+  DatabaseError,
+  StorageUnavailableError,
+  QuotaExceededError,
+  UpgradeBlockedError,
+  VersionMismatchError,
+  ConnectionClosedError,
+  normaliseError
+} from './errors.js';
+import {
+  DATABASE_VERSION,
+  METADATA_STORE,
+  RECORDS_STORE,
+  runUpgrade,
+  missingIndexes
+} from './migrations.js';
+import { emit, EventTypes } from './events.js';
+
+export const DEFAULT_DATABASE_NAME = 'bookkit-local-v1';
+
+const connections = new Map();
+const opening = new Map();
+
+function validateVersion(version) {
+  if (!Number.isInteger(version) || version < 1) {
+    throw new DatabaseError(
+      `Invalid local database version: ${version}`,
+      'INVALID_VERSION'
     );
-    this.name = 'UpgradeBlockedError';
-    this.oldVersion = oldVersion;
-    this.newVersion = newVersion;
   }
 }
-
-export class StorageUnavailableError extends DatabaseError {
-  constructor(reason) {
-    super(`Browser storage unavailable: ${reason}`, 'STORAGE_UNAVAILABLE');
-    this.name = 'StorageUnavailableError';
-  }
-}
-
-export class QuotaExceededError extends DatabaseError {
-  constructor() {
-    super('Storage quota exceeded', 'QUOTA_EXCEEDED');
-    this.name = 'QuotaExceededError';
-  }
-}
-
-const DEFAULT_DB_NAME = 'bookkit-local-v1';
-const DEFAULT_VERSION = 1;
 
 /**
- * Check if IndexedDB is available and functional.
+ * Verify the opened database has the stores and indexes this runtime expects.
+ * It never repairs or deletes an incompatible database.
+ */
+function assertSchema(db, databaseName) {
+  if (!db.objectStoreNames.contains(RECORDS_STORE)) {
+    throw new DatabaseError(
+      `The "${databaseName}" database has no records store`,
+      'SCHEMA_INCOMPATIBLE'
+    );
+  }
+  if (!db.objectStoreNames.contains(METADATA_STORE)) {
+    throw new DatabaseError(
+      `The "${databaseName}" database has no metadata store`,
+      'SCHEMA_INCOMPATIBLE'
+    );
+  }
+
+  const transaction = db.transaction(RECORDS_STORE, 'readonly');
+  const records = transaction.objectStore(RECORDS_STORE);
+  const missing = missingIndexes(records);
+  if (missing.length > 0) {
+    throw new DatabaseError(
+      `The "${databaseName}" database is missing required indexes: ${missing.join(', ')}`,
+      'SCHEMA_INCOMPATIBLE'
+    );
+  }
+}
+
+function closeEntry(entry) {
+  if (!entry || entry.closed) return;
+  entry.closed = true;
+  connections.delete(entry.name);
+  try {
+    entry.db.close();
+  } catch {
+    // The browser may already have closed it.
+  }
+}
+
+function openRaw(databaseName, version, config) {
+  return new Promise((resolve, reject) => {
+    let request;
+    let previousVersion = 0;
+    let upgradeError = null;
+    let settled = false;
+
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    };
+
+    try {
+      request = indexedDB.open(databaseName, version);
+    } catch (error) {
+      fail(normaliseError(error, 'opening local storage'));
+      return;
+    }
+
+    request.onupgradeneeded = (event) => {
+      previousVersion = event.oldVersion;
+      try {
+        runUpgrade(request.result, request.transaction, event.oldVersion, event.newVersion);
+
+        if (typeof config.onUpgrade === 'function') {
+          const result = config.onUpgrade(request.result, event.oldVersion, event.newVersion);
+          if (result && typeof result.then === 'function') {
+            console.warn('[bookkit-local] onUpgrade must be synchronous; returning a Promise is not supported');
+          }
+        }
+      } catch (error) {
+        upgradeError = normaliseError(error, 'upgrading local storage');
+        try {
+          request.transaction.abort();
+        } catch {
+          // The browser may have aborted already.
+        }
+      }
+    };
+
+    request.onblocked = (event) => {
+      const oldVersion = event.oldVersion ?? previousVersion;
+      const newVersion = event.newVersion ?? version;
+      emit(EventTypes.VERSION_BLOCKED, {
+        reason: 'blocked',
+        databaseName,
+        oldVersion,
+        newVersion
+      });
+      if (typeof config.onBlocked === 'function') {
+        config.onBlocked(oldVersion, newVersion);
+      }
+    };
+
+    request.onsuccess = () => {
+      if (settled) return;
+      const db = request.result;
+
+      if (upgradeError) {
+        try { db.close(); } catch { /* ignore */ }
+        fail(upgradeError);
+        return;
+      }
+
+      try {
+        assertSchema(db, databaseName);
+      } catch (error) {
+        try { db.close(); } catch { /* ignore */ }
+        fail(error);
+        return;
+      }
+
+      const entry = {
+        name: databaseName,
+        db,
+        version: db.version,
+        refs: 1,
+        closed: false,
+        config
+      };
+
+      db.onversionchange = (event) => {
+        emit(EventTypes.VERSION_CHANGE, {
+          databaseName,
+          oldVersion: db.version,
+          newVersion: event.newVersion
+        });
+        emit(EventTypes.VERSION_BLOCKED, {
+          reason: 'version-change',
+          databaseName,
+          oldVersion: db.version,
+          newVersion: event.newVersion
+        });
+        if (typeof config.onVersionChange === 'function') {
+          try { config.onVersionChange(event.newVersion); } catch { /* consumer error */ }
+        }
+        closeEntry(entry);
+      };
+
+      db.onclose = () => {
+        if (entry.closed) return;
+        entry.closed = true;
+        connections.delete(databaseName);
+        emit(EventTypes.CONNECTION_CLOSED, {
+          databaseName,
+          code: 'CONNECTION_CLOSED'
+        });
+        emit(EventTypes.STORAGE_ERROR, {
+          databaseName,
+          namespace: null,
+          operation: 'connection',
+          code: 'CONNECTION_CLOSED',
+          message: 'The browser closed the local database unexpectedly'
+        });
+      };
+
+      connections.set(databaseName, entry);
+      settled = true;
+      resolve({ entry, upgraded: db.version > previousVersion, previousVersion });
+    };
+
+    request.onerror = () => {
+      if (settled) return;
+      const error = request.error;
+      if (upgradeError) {
+        fail(upgradeError);
+        return;
+      }
+      if (error?.name === 'VersionError') {
+        fail(new VersionMismatchError(databaseName, 'newer', version));
+        return;
+      }
+      if (error?.name === 'QuotaExceededError') {
+        fail(new QuotaExceededError(error));
+        return;
+      }
+      if (error?.name === 'SecurityError') {
+        fail(new StorageUnavailableError('the browser denied access to local storage'));
+        return;
+      }
+      fail(normaliseError(error, 'opening local storage'));
+    };
+  });
+}
+
+/**
+ * Open (or reuse) a versioned database connection.
+ * Returns { entry, upgraded, previousVersion }.
+ */
+export async function openDatabase(config = {}) {
+  const databaseName = config.name || config.databaseName || DEFAULT_DATABASE_NAME;
+  const version = Number(config.version || config.schemaVersion || DATABASE_VERSION);
+  validateVersion(version);
+
+  if (typeof indexedDB === 'undefined') {
+    throw new StorageUnavailableError('IndexedDB is not supported by this browser');
+  }
+
+  const existing = connections.get(databaseName);
+  if (existing && !existing.closed) {
+    if (existing.version !== version) {
+      if (version < existing.version) {
+        throw new VersionMismatchError(databaseName, existing.version, version);
+      }
+      throw new DatabaseError(
+        `The "${databaseName}" database is already open at v${existing.version}; close it before opening v${version}`,
+        'VERSION_CONFLICT'
+      );
+    }
+    existing.refs += 1;
+    return { entry: existing, upgraded: false, previousVersion: existing.version };
+  }
+
+  const pending = opening.get(databaseName);
+  if (pending) {
+    const result = await pending;
+    if (result.entry.version !== version) {
+      throw new DatabaseError(
+        `The "${databaseName}" database was opened concurrently at v${result.entry.version}, not v${version}`,
+        'VERSION_CONFLICT'
+      );
+    }
+    result.entry.refs += 1;
+    return { entry: result.entry, upgraded: false, previousVersion: result.previousVersion };
+  }
+
+  const promise = openRaw(databaseName, version, config);
+  opening.set(databaseName, promise);
+  try {
+    return await promise;
+  } finally {
+    opening.delete(databaseName);
+  }
+}
+
+/**
+ * Release a connection obtained from openDatabase().
+ * The underlying IndexedDB connection closes when the last user releases it.
+ */
+export function releaseDatabase(entry) {
+  if (!entry || entry.closed) return;
+  entry.refs -= 1;
+  if (entry.refs <= 0) closeEntry(entry);
+}
+
+export function isConnectionClosed(entry) {
+  return !entry || entry.closed;
+}
+
+/**
+ * Capability check. It does not create a probe database; a real open() call
+ * remains the authoritative test for private-mode and security failures.
  */
 export async function checkAvailability() {
   if (typeof indexedDB === 'undefined') {
-    return { available: false, reason: 'IndexedDB not supported' };
+    return {
+      available: false,
+      reason: 'IndexedDB is not supported by this browser'
+    };
   }
 
-  // Probe with a temporary database
-  try {
-    const probeName = '__bookkit_probe__';
-    await new Promise((resolve, reject) => {
-      const req = indexedDB.open(probeName, 1);
-      req.onupgradeneeded = () => {
-        req.result.createObjectStore('probe');
-      };
-      req.onsuccess = () => {
-        req.result.close();
-        indexedDB.deleteDatabase(probeName);
-        resolve();
-      };
-      req.onerror = () => reject(new Error('Probe failed'));
-      req.onblocked = () => reject(new Error('Probe blocked'));
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (message.includes('private') || message.includes('Private')) {
-      return { available: false, reason: 'Private browsing mode restricts IndexedDB' };
-    }
-    return { available: false, reason: message };
-  }
-
-  // Get storage estimate if available
-  let estimate;
-  if (navigator.storage?.estimate) {
+  let estimate = null;
+  if (typeof navigator !== 'undefined' && navigator.storage?.estimate) {
     try {
       estimate = await navigator.storage.estimate();
     } catch {
-      // Ignore estimate errors
+      estimate = null;
     }
   }
 
   return { available: true, estimate };
 }
 
-/**
- * Open or create the database with versioned schema.
- * Returns the database connection and upgrade status.
- */
-export async function openDatabase(config = {}) {
-  const name = config.name || DEFAULT_DB_NAME;
-  const version = config.version || DEFAULT_VERSION;
-
-  const availability = await checkAvailability();
-  if (!availability.available) {
-    throw new StorageUnavailableError(availability.reason || 'Unknown reason');
-  }
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(name, version);
-
-    request.onupgradeneeded = (event) => {
-      const db = request.result;
-      const oldVersion = event.oldVersion;
-      const newVersion = event.newVersion;
-
-      // Create object stores for version 1
-      if (oldVersion < 1) {
-        createSchemaV1(db);
-      }
-
-      // Run custom upgrade logic if provided
-      if (config.onUpgrade) {
-        try {
-          const result = config.onUpgrade(db, oldVersion, newVersion);
-          if (result instanceof Promise) {
-            console.warn('[bookkit-local] onUpgrade returned a promise; it may not be awaited by IndexedDB');
-          }
-        } catch (error) {
-          console.error('[bookkit-local] Upgrade failed:', error);
-          request.transaction?.abort();
-          throw error;
-        }
-      }
-    };
-
-    request.onblocked = () => {
-      if (config.onBlocked) {
-        config.onBlocked(event.oldVersion, event.newVersion);
-      } else {
-        const blockedEvent = new CustomEvent('bookkit:local:version-blocked', {
-          detail: { databaseName: name, oldVersion: event.oldVersion, newVersion: event.newVersion }
-        });
-        window.dispatchEvent(blockedEvent);
-      }
-    };
-
-    request.onsuccess = () => {
-      const db = request.result;
-      const upgraded = db.version > (event.oldVersion || 0);
-
-      db.onversionchange = () => {
-        if (config.onVersionChange) {
-          config.onVersionChange();
-        } else {
-          const vcEvent = new CustomEvent('bookkit:local:version-change', {
-            detail: { databaseName: name }
-          });
-          window.dispatchEvent(vcEvent);
-          db.close();
-        }
-      };
-
-      resolve({ db, upgraded, previousVersion: event.oldVersion || 0 });
-    };
-
-    request.onerror = () => {
-      const error = request.error;
-      if (error?.name === 'QuotaExceededError' || error?.name === 'ConstraintError') {
-        reject(new QuotaExceededError());
-      } else if (error?.name === 'SecurityError') {
-        reject(new StorageUnavailableError('Security error (possibly private browsing)'));
-      } else if (error?.name === 'UnknownError') {
-        reject(new StorageUnavailableError('Unknown IndexedDB error'));
-      } else {
-        reject(new DatabaseError(
-          error?.message || 'Failed to open database',
-          'OPEN_FAILED',
-          error
-        ));
-      }
-    };
-  });
-}
-
-/**
- * Create the version 1 schema.
- */
-function createSchemaV1(db) {
-  const recordsStore = db.createObjectStore('records', { keyPath: ['namespace', 'kind', 'id'] });
-
-  recordsStore.createIndex('byNamespaceSubject', ['namespace', 'subjectId'], { unique: false });
-  recordsStore.createIndex('byNamespaceKind', ['namespace', 'kind'], { unique: false });
-  recordsStore.createIndex('byNamespaceKindSubject', ['namespace', 'kind', 'subjectId'], { unique: false });
-  recordsStore.createIndex('byNamespaceUpdatedAt', ['namespace', 'updatedAt'], { unique: false });
-
-  db.createObjectStore('metadata', { keyPath: 'key' });
-}
-
-/**
- * Close a database connection cleanly.
- */
-export function closeDatabase(db) {
-  if (db && db.objectStoreNames.length > 0) {
-    db.close();
-  }
-}
-
-/**
- * Delete the database entirely.
- */
-export function deleteDatabase(name = DEFAULT_DB_NAME) {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.deleteDatabase(name);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(new DatabaseError(
-      request.error?.message || 'Failed to delete database',
-      'DELETE_FAILED',
-      request.error
-    ));
-    request.onblocked = () => {
-      reject(new UpgradeBlockedError(0, 0));
-    };
-  });
-}
-
-/**
- * Get storage usage estimate.
- */
 export async function getStorageEstimate() {
-  if (navigator.storage?.estimate) {
-    try {
-      return await navigator.storage.estimate();
-    } catch {
-      return null;
-    }
+  if (typeof navigator === 'undefined' || !navigator.storage?.estimate) return null;
+  try {
+    return await navigator.storage.estimate();
+  } catch {
+    return null;
   }
-  return null;
 }
 
-/**
- * Request persistent storage.
- */
 export async function requestPersistence() {
-  if (navigator.storage?.persist) {
-    try {
-      return await navigator.storage.persist();
-    } catch {
-      return false;
-    }
+  if (typeof navigator === 'undefined' || !navigator.storage?.persist) return false;
+  try {
+    return await navigator.storage.persist();
+  } catch {
+    return false;
   }
-  return false;
+}
+
+export async function isPersisted() {
+  if (typeof navigator === 'undefined' || !navigator.storage?.persisted) return false;
+  try {
+    return await navigator.storage.persisted();
+  } catch {
+    return false;
+  }
+}
+
+export async function getStorageDiagnostics() {
+  const estimate = await getStorageEstimate();
+  const persisted = await isPersisted();
+  return { estimate, persisted };
 }
 
 /**
- * Check if storage is persisted.
+ * Delete a database. Intended for explicit user/developer reset tooling only;
+ * migrations never call it.
  */
-export async function isPersisted() {
-  if (navigator.storage?.persisted) {
+export async function deleteDatabase(databaseName = DEFAULT_DATABASE_NAME) {
+  const existing = connections.get(databaseName);
+  if (existing) closeEntry(existing);
+
+  return new Promise((resolve, reject) => {
+    let request;
     try {
-      return await navigator.storage.persisted();
-    } catch {
-      return false;
+      request = indexedDB.deleteDatabase(databaseName);
+    } catch (error) {
+      reject(normaliseError(error, 'deleting local storage'));
+      return;
     }
-  }
-  return false;
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(normaliseError(request.error, 'deleting local storage'));
+    request.onblocked = () => reject(new UpgradeBlockedError(0, 0));
+  });
 }
+
+export { DatabaseError, StorageUnavailableError, QuotaExceededError, UpgradeBlockedError, VersionMismatchError, ConnectionClosedError };

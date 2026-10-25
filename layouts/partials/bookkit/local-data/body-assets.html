@@ -1,10 +1,15 @@
-{{/* Bookkit Local Data: enhancement script. Emitted only when local data
-is enabled. Consuming sites with their own base layout include this partial
-before </body>; Bookkit's own base layout includes it too. */}}
-{{- $cfg := .Site.Params.bookkit -}}
-{{- if $cfg.features.localData }}
-<script type="module">
-  import BookkitLocal from '{{ "js/bookkit-local/index.js" | relURL }}';
-  window.BookkitLocal = BookkitLocal;
-</script>
-{{- end }}
+{{/* Bookkit Local Data: runtime entry point.
+
+The feature flag makes the capability available to a site; a page must also
+opt in with `bookkit_local_data = true` (usually through a section cascade).
+That keeps the database module off unrelated pages. Module scripts are
+deferred and the platform only opens a database when a consumer calls
+`BookkitLocal.open()`.
+
+Consuming sites with their own base layout include this partial before
+</body>; Bookkit's own base layout includes it too. */}}
+{{- $cfg := .Site.Params.bookkit | default dict -}}
+{{- $features := $cfg.features | default dict -}}
+{{- if and $features.localData .Params.bookkit_local_data -}}
+<script type="module" src="{{ "js/bookkit-local/index.js" | relURL }}" data-bookkit-local-runtime></script>
+{{- end -}}

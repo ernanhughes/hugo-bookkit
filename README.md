@@ -106,7 +106,8 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
 
 ## Local Data Platform (BK-LD01)
 
-BookKit v0.4.0+ includes a reusable browser-local persistence platform using IndexedDB.
+BookKit includes a reusable browser-local persistence platform built on native
+IndexedDB. It is a generic record store, not a research-specific database.
 
 ### Enable Local Data
 
@@ -115,7 +116,22 @@ BookKit v0.4.0+ includes a reusable browser-local persistence platform using Ind
   localData = true
 ```
 
-This loads `static/js/bookkit-local/index.js` (ES module) and `static/css/bookkit-local.css` only on pages that need it.
+The feature flag makes the capability available. A page must also opt in:
+
+```yaml
+bookkit_local_data: true
+```
+
+A section cascade is the usual way to do this. BookKit emits the runtime and
+optional status styles only on opt-in pages:
+
+```gohtml
+{{ partial "bookkit/local-data/head-assets.html" . }}
+{{ partial "bookkit/local-data/body-assets.html" . }}
+```
+
+BookKit's base layout already includes them. A consuming site with its own base
+layout should include both partials explicitly.
 
 ### JavaScript API
 
@@ -124,30 +140,44 @@ import BookkitLocal from '/js/bookkit-local/index.js';
 
 const store = await BookkitLocal.open({ namespace: 'research' });
 
-// Create a note
-await store.put({
+const saved = await store.put({
   kind: 'note',
-  id: 'note-001',
+  id: crypto.randomUUID(),
   subjectId: 'retrieval-07-chapter',
+  schemaVersion: 1,
   payload: { text: 'Investigate this claim.' }
 });
 
-// Query notes for a chapter
-const notes = await store.list({ kind: 'note', subjectId: 'retrieval-07-chapter' });
+const notes = await store.list({
+  kind: 'note',
+  subjectId: 'retrieval-07-chapter'
+});
 
-// Export all research for a chapter
-await store.exportAndDownload({ subjectIds: ['retrieval-07-chapter'] });
+await store.put(
+  { ...saved, payload: { text: 'Revised claim.' } },
+  { expectedRevision: saved.revision }
+);
+
+const backup = await store.export({ subjectIds: ['retrieval-07-chapter'] });
 ```
 
 ### Architecture
 
-- **Generic record store** — single `records` object store with compound key `[namespace, kind, id]`
-- **Namespaced** — `research`, `annotations`, `learning`, `language`, `personalisation`, etc.
-- **Versioned** — schema migrations via `migrations.js` (v1→v2→v3...)
-- **Portable** — JSON export/import with checksums, Markdown export for research
-- **Private** — no network, no accounts, no telemetry
+- **Generic record store** — compound key `[namespace, kind, id]` and indexed
+  queries by namespace, kind, subject and update time.
+- **Namespaced** — `research`, `annotations`, `learning`, `language`,
+  `personalisation`, etc.
+- **Versioned** — IndexedDB schema v2 with deterministic migrations, v1→v2 data
+  preservation, blocked-upgrade recovery and version-change closure.
+- **Concurrency-aware** — monotonic revisions and optional `expectedRevision`
+  checks; conflicts throw instead of silently overwriting.
+- **Portable** — versioned JSON export/import with checksum, bounds, duplicate
+  detection and explicit merge/replace/skip policies.
+- **Private** — no network, accounts, telemetry, backend or cloud sync. Events
+  never carry record payloads.
 
-See [`docs/local-data-architecture.md`](docs/local-data-architecture.md) for full ADR.
+See [`docs/local-data-architecture.md`](docs/local-data-architecture.md) for the
+ADR and [`docs/local-data-api.md`](docs/local-data-api.md) for the API contract.
 
 ## Book catalogue card
 

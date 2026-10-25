@@ -30,6 +30,7 @@ disableKinds = ["taxonomy", "term", "rss"]
 
     [params.bookkit.features]
       research = true
+      localData = true
 
     [params.bookkit.research]
       warnMissingDossier = true

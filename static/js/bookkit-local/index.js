@@ -1,133 +1,258 @@
 /**
- * Bookkit Local Data Platform — Public API
+ * Bookkit Local Data Platform - public API.
  *
- * Main entry point for consumers. Provides a simple, documented async interface.
+ * const store = await BookkitLocal.open({ namespace: 'research' });
+ * await store.put({ kind: 'note', id: '...', subjectId: '...', payload: {...} });
+ * const notes = await store.list({ kind: 'note', subjectId: '...' });
+ *
+ * Write promises resolve after IndexedDB commits, not merely after a request
+ * succeeds. Callers should pass { expectedRevision } when editing an existing
+ * record to avoid overwriting a newer edit from another tab.
  */
 
-export { DatabaseError, StorageUnavailableError, QuotaExceededError, UpgradeBlockedError } from './database.js';
-export { registerMigration, getMigrations, runMigrations, getCurrentVersion, getDatabaseInfo, migrateWithUserNotification } from './migrations.js';
-export { on, once, emit, waitForReady, onStorageError, onVersionBlocked, onVersionChange, enableDebugLogging, EventTypes } from './events.js';
-export { exportRecords, exportAndDownload, importRecords, importFromFile, exportToMarkdown, exportMarkdownAndDownload } from './portability.js';
-export { openStore, createRecord, getRecord, putRecord, deleteRecord, listRecords, batchRecords, countRecords, clearNamespace } from './records.js';
+import {
+  openDatabase,
+  checkAvailability,
+  getStorageEstimate,
+  requestPersistence,
+  isPersisted,
+  getStorageDiagnostics,
+  deleteDatabase,
+  isConnectionClosed
+} from './database.js';
+import {
+  openStore,
+  closeStore,
+  createRecord,
+  getRecord,
+  putRecord,
+  deleteRecord,
+  listRecords,
+  countRecords,
+  batchRecords,
+  putMany,
+  deleteMany,
+  clearNamespace,
+  deleteSubject
+} from './records.js';
+import {
+  exportRecords,
+  downloadExport,
+  exportAndDownload,
+  importRecords,
+  importFromFile,
+  validateExportData
+} from './portability.js';
+import { emit, EventTypes } from './events.js';
+import {
+  DatabaseError,
+  StorageUnavailableError,
+  QuotaExceededError,
+  UpgradeBlockedError,
+  VersionMismatchError,
+  ConnectionClosedError,
+  ValidationError,
+  ConflictError,
+  ImportError,
+  BookkitLocalError
+} from './errors.js';
+import { DATABASE_VERSION, PLATFORM_VERSION } from './migrations.js';
 
-let currentStore = null;
+export { PLATFORM_VERSION };
+export const DEFAULT_DATABASE_NAME = 'bookkit-local-v1';
+
+const stores = new Map();
+
+function cacheKey(databaseName, namespace) {
+  return `${databaseName}\u0000${namespace}`;
+}
 
 async function createStoreInstance(options) {
-  const { openDatabase } = await import('./database.js');
-  const { openStore } = await import('./records.js');
-  const { exportRecords, exportAndDownload, importRecords, importFromFile, exportToMarkdown, exportMarkdownAndDownload } = await import('./portability.js');
-  const { getRecord, putRecord, deleteRecord, listRecords, batchRecords, countRecords } = await import('./records.js');
-  const { emit } = await import('./events.js');
-
-  const dbName = options.databaseName || 'bookkit-local-v1';
-  const version = options.version || 1;
-
-  const { db } = await openDatabase({ name: dbName, version });
-  const store = await openStore({ ...options, databaseName: dbName, version });
-
-  emit('bookkit:local:ready', { namespace: options.namespace, databaseName: dbName });
+  const databaseName = options.databaseName || DEFAULT_DATABASE_NAME;
+  const store = await openStore({
+    ...options,
+    databaseName
+  });
+  const key = cacheKey(store.databaseName, store.namespace);
 
   const instance = {
-    namespace: options.namespace,
-    databaseName: dbName,
-    version,
+    namespace: store.namespace,
+    databaseName: store.databaseName,
+    version: store.schemaVersion,
+    schemaVersion: store.schemaVersion,
+    upgraded: store.upgraded,
+    previousVersion: store.previousVersion,
 
-    async get(kind, id) {
+    put(record, putOptions) {
+      return putRecord(store, record, putOptions);
+    },
+
+    putMany(records, putOptions) {
+      return putMany(store, records, putOptions);
+    },
+
+    get(kind, id) {
       return getRecord(store, kind, id);
     },
 
-    async put(record) {
-      return putRecord(store, record);
+    list(query) {
+      return listRecords(store, query);
     },
 
-    async delete(kind, id) {
-      return deleteRecord(store, kind, id);
+    count(query) {
+      return countRecords(store, query);
     },
 
-    async list(options) {
-      return listRecords(store, options);
+    delete(kind, id, deleteOptions) {
+      return deleteRecord(store, kind, id, deleteOptions);
     },
 
-    async batch(operations) {
+    deleteMany(items, deleteOptions) {
+      return deleteMany(store, items, deleteOptions);
+    },
+
+    batch(operations) {
       return batchRecords(store, operations);
     },
 
-    async count(options) {
-      return countRecords(store, options);
+    deleteSubject(subjectId) {
+      return deleteSubject(store, subjectId);
     },
 
-    async export(options) {
-      return exportRecords(store, options);
+    clearNamespace() {
+      return clearNamespace(store);
     },
 
-    async exportAndDownload(options) {
-      return exportAndDownload(store, options);
+    export(exportOptions) {
+      return exportRecords(store, exportOptions);
     },
 
-    async import(data, options) {
-      return importRecords(store, data, options);
+    downloadExport(exportOptions) {
+      return downloadExport(store, exportOptions);
     },
 
-    async importFromFile(file, options) {
-      return importFromFile(store, file, options);
+    exportAndDownload(exportOptions) {
+      return exportAndDownload(store, exportOptions);
     },
 
-    async exportToMarkdown(subjectId) {
-      return exportToMarkdown(store, subjectId);
+    import(data, importOptions) {
+      return importRecords(store, data, importOptions);
     },
 
-    async exportMarkdownAndDownload(subjectId, filename) {
-      return exportMarkdownAndDownload(store, subjectId, filename);
+    importFromFile(file, importOptions) {
+      return importFromFile(store, file, importOptions);
+    },
+
+    async getDiagnostics() {
+      const storage = await getStorageDiagnostics();
+      return {
+        available: true,
+        namespace: store.namespace,
+        databaseName: store.databaseName,
+        schemaVersion: store.schemaVersion,
+        ...storage
+      };
     },
 
     async close() {
-      store.db.close();
-      currentStore = null;
+      if (store.closed) return;
+      stores.delete(key);
+      closeStore(store);
+    },
+
+    get closed() {
+      return store.closed || isConnectionClosed(store.entry);
     }
   };
 
+  stores.set(key, instance);
+  emit(EventTypes.READY, {
+    namespace: store.namespace,
+    databaseName: store.databaseName,
+    schemaVersion: store.schemaVersion
+  });
   return instance;
 }
 
 const BookkitLocal = {
-  async open(options) {
-    if (currentStore && currentStore.namespace === options.namespace) {
-      return currentStore;
+  platformVersion: PLATFORM_VERSION,
+  schemaVersion: DATABASE_VERSION,
+  EventTypes,
+
+  async open(options = {}) {
+    if (!options.namespace) {
+      throw new ValidationError('BookkitLocal.open requires a namespace');
     }
+    const databaseName = options.databaseName || DEFAULT_DATABASE_NAME;
+    const key = cacheKey(databaseName, options.namespace);
+    const cached = stores.get(key);
+    if (cached && !cached.closed) return cached;
+    if (cached) stores.delete(key);
 
-    const instance = await createStoreInstance(options);
-    currentStore = instance;
-    return instance;
+    return createStoreInstance({ ...options, databaseName });
   },
 
-  async checkAvailability() {
-    const { checkAvailability } = await import('./database.js');
-    return checkAvailability();
-  },
+  checkAvailability,
+  getStorageEstimate,
+  requestPersistence,
+  isPersisted,
+  getStorageDiagnostics,
+  deleteDatabase,
+  createRecord,
+  validateExport: validateExportData,
 
-  async requestPersistence() {
-    const { requestPersistence } = await import('./database.js');
-    return requestPersistence();
-  },
-
-  async isPersisted() {
-    const { isPersisted } = await import('./database.js');
-    return isPersisted();
-  },
-
-  async deleteDatabase(name) {
-    const { deleteDatabase } = await import('./database.js');
-    return deleteDatabase(name);
-  },
-
-  async getStorageEstimate() {
-    const { getStorageEstimate } = await import('./database.js');
-    return getStorageEstimate();
+  errors: {
+    BookkitLocalError,
+    DatabaseError,
+    StorageUnavailableError,
+    QuotaExceededError,
+    UpgradeBlockedError,
+    VersionMismatchError,
+    ConnectionClosedError,
+    ValidationError,
+    ConflictError,
+    ImportError
   }
 };
 
 export default BookkitLocal;
-export { BookkitLocal };
+export {
+  BookkitLocal,
+  openDatabase,
+  checkAvailability,
+  getStorageEstimate,
+  requestPersistence,
+  isPersisted,
+  getStorageDiagnostics,
+  deleteDatabase,
+  createRecord,
+  getRecord,
+  putRecord,
+  deleteRecord,
+  listRecords,
+  countRecords,
+  batchRecords,
+  clearNamespace,
+  deleteSubject,
+  exportRecords,
+  downloadExport,
+  exportAndDownload,
+  importRecords,
+  importFromFile,
+  validateExportData,
+  emit,
+  EventTypes,
+  DatabaseError,
+  StorageUnavailableError,
+  QuotaExceededError,
+  UpgradeBlockedError,
+  VersionMismatchError,
+  ConnectionClosedError,
+  ValidationError,
+  ConflictError,
+  ImportError,
+  BookkitLocalError
+};
 
 if (typeof window !== 'undefined' && !window.BookkitLocal) {
   window.BookkitLocal = BookkitLocal;

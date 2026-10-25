@@ -1,328 +1,417 @@
 # Bookkit Local Data Platform — Architecture Decision Record
 
-**Status**: Proposed  
-**Date**: 2026-10-20  
-**Related**: BK-LD01 — Bookkit Local Data Platform and Programmer.ie Research Workspace
+**Status:** Accepted
+**Date:** 2026-10-25
+**Workstream:** BK-LD01
+**Starting release:** Bookkit v0.4.2 (existing generic platform branch)
+**Recommended release:** v0.5.0 (not tagged by this work)
 
 ---
 
-## 1. Context and Problem Statement
+## 1. Context and problem
 
-We need a reusable, versioned browser-local persistence platform using IndexedDB in Hugo Bookkit. The first application is a persistent research workspace on Programmer.ie where visitors can create notes, capture sources, record findings, and have their work survive browser restarts.
+Bookkit needs a reusable browser-local persistence capability, not a one-off
+research textarea. Programmer.ie is the first consumer: readers must be able to
+write notes, capture sources, record runs and draft proposals, close the page,
+and return to the same browser profile with the work intact.
 
-The platform must:
-- Be site-independent (Bookkit owns the storage engine)
-- Support multiple namespaces (research, annotations, learning, language, etc.)
-- Handle schema versioning and migration
-- Work on statically hosted Hugo sites
-- Not require user accounts or network services
-- Provide clear privacy boundaries
+The storage substrate must also fit future Bookkit namespaces such as
+`annotations`, `learning`, `language` and `personalisation` without asking each
+feature to design its own IndexedDB lifecycle.
 
----
-
-## 2. Existing Architecture Analysis
-
-### 2.1 Bookkit JavaScript Architecture
-- ES modules loaded via `<script defer>` in base layout
-- Feature-gated loading through `params.bookkit.features` config
-- Existing modules: `book-reader.js` (localStorage), `bookkit-research.js` (API-enhanced), `bookkit-search.js`, `bookkit-examples.js`
-- Asset partials: `head-assets.html`, `body-assets.html` for conditional inclusion
-- Custom CSS/JS injection via `params.bookkit.customCSS` / `params.bookkit.customJS`
-
-### 2.2 Existing localStorage Use
-- `book-reader.js` stores reading progress per book slug under `hugo-bookkit:progress:{bookSlug}`
-- Simple key-value, no versioning, no migration
-- No migration necessary — reading progress is ephemeral and non-critical
-
-### 2.3 Hugo Module Boundaries
-- Bookkit is consumed as a Hugo module (`github.com/ernanhughes/hugo-bookkit`)
-- Programmer.ie pins `v0.3.1` in `go.mod`
-- Vendor directory (`_vendor`) takes precedence; must avoid editing vendored files
-- Local development uses `replace` directive in `go.mod`
-
-### 2.4 Site-Specific Layout Overrides
-- Programmer.ie uses its own `layouts/_default/baseof.html`
-- Includes Bookkit partials explicitly: `bookkit/research/head-assets.html`, `bookkit/research/body-assets.html`
-- Bookkit's base layout is not used by Programmer.ie
-
-### 2.5 Module Dependency/Versioning Workflow
-1. Develop in local `hugo-bookkit` repo
-2. Test against `exampleSite` and via `replace` in Programmer.ie
-3. Tag release in Bookkit
-4. Update `go.mod` in Programmer.ie to new version
-5. Run `hugo mod vendor` to update `_vendor`
-
-### 2.6 IndexedDB Browser Support
-- Supported in all modern browsers (Chrome, Firefox, Safari, Edge)
-- Private browsing: may restrict or disable IndexedDB (Safari private mode)
-- Quota: varies by browser/origin; `navigator.storage.estimate()` available
-- Failure modes: `SecurityError`, `QuotaExceededError`, `UnknownError`, blocked upgrades
+The platform must work on a static Hugo site with no account, backend, hosted
+database, paid AI provider, telemetry or background execution.
 
 ---
 
-## 3. Database Schema Design
+## 2. Existing architecture audit
 
-### 3.1 Database Name
-`bookkit-local-v1` (configurable via `params.bookkit.localData.databaseName`)
+### 2.1 Bookkit JavaScript and assets
 
-### 3.2 Object Stores
+- Bookkit is consumed as a Hugo module. Consumers declare one import in
+  `hugo.toml`; site-local layouts override module layouts.
+- Existing browser code is plain JavaScript under `static/js/` (`book-reader.js`,
+  `bookkit-research.js`, `bookkit-search.js`, `bookkit-examples.js`).
+- There is no build step and no runtime framework. ES modules are supported by
+  every browser that supports the IndexedDB APIs used here.
+- Asset inclusion is feature-gated through `layouts/partials/bookkit/...` and
+  `[params.bookkit.features]`.
+- Programmer.ie uses its own `layouts/_default/baseof.html`; it must include the
+  Bookkit asset partials explicitly.
 
-#### `records` — Primary record store
+### 2.2 Existing localStorage
+
+`book-reader.js` stores reading progress under
+`hugo-bookkit:progress:<bookSlug>`. It is ephemeral, non-critical, and has no
+schema. Migrating it now would add risk without user benefit. The platform
+therefore leaves reading progress in localStorage and documents a future,
+optional one-way import if a concrete need appears.
+
+### 2.3 Module boundaries
+
+Bookkit owns:
+
+- IndexedDB lifecycle, upgrades and connection recovery.
+- The generic record envelope, namespaced queries and transactions.
+- Export/import format, validation and integrity checks.
+- Optional DOM events, BroadcastChannel notifications and diagnostics.
+- A small asset partial that loads the runtime only on opt-in pages.
+
+Programmer.ie owns:
+
+- The meaning of notes, sources, runs, proposals and imported reports.
+- Chapter identity, freshness comparison and reader-facing warnings.
+- Research UI, Markdown export and the external-report import workflow.
+- Research-specific records, validation and tests.
+
+The research dossier renderer in Bookkit and Programmer.ie's chapter research
+companions remain separate systems. This work does not merge them.
+
+### 2.4 Layout overrides
+
+Programmer.ie does not use Bookkit's base layout. It now includes:
+
+- `bookkit/research/head-assets.html` and `body-assets.html` (existing).
+- `bookkit/local-data/head-assets.html` and `body-assets.html` (new).
+- Its own `research/workspace.html` presentation partial.
+
+The local-data partials emit nothing unless the site enables
+`params.bookkit.features.localData` **and** the current page sets
+`bookkit_local_data = true`. A section cascade opts all research companions in.
+
+### 2.5 Versioning and dependency workflow
+
+Bookkit follows Semantic Versioning. Consumers should pin immutable released
+versions and run `hugo mod vendor` after upgrading. Hugo prefers `_vendor/`, so
+a stale vendor tree can mask a new module. During local cross-repository tests,
+use a temporary Go `replace` directive plus:
+
+```bash
+hugo --ignoreVendorPaths "github.com/ernanhughes/hugo-bookkit"
 ```
-Key: [namespace, kind, id] (compound key)
+
+Do not edit files under `_vendor` as source. This work recommends v0.5.0 because
+it adds a storage schema version and new API options; no tag or release is
+created without author approval.
+
+---
+
+## 3. Database schema
+
+**Database name:** `bookkit-local-v1` (the platform generation name; the
+IndexedDB schema version inside it is independent). Configurable per `open()`.
+
+**Physical schema version:** `2`.
+
+### `records` object store
+
+Key path: `["namespace", "kind", "id"]`
+
 Indexes:
-  - byNamespaceSubject: [namespace, subjectId]
-  - byNamespaceKind: [namespace, kind]
-  - byNamespaceKindSubject: [namespace, kind, subjectId]
-  - byNamespaceUpdatedAt: [namespace, updatedAt]
-```
 
-#### `metadata` — Platform metadata
-```
-Key: string (e.g., "platformVersion", "installationId")
-Value: any
-```
+| Index | Key path | Use |
+|---|---|---|
+| `byNamespaceSubject` | `[namespace, subjectId]` | All records for a chapter / subject |
+| `byNamespaceKind` | `[namespace, kind]` | All records of one type |
+| `byNamespaceKindSubject` | `[namespace, kind, subjectId]` | Notes for one chapter |
+| `byNamespaceUpdatedAt` | `[namespace, updatedAt]` | Recent/all records in a namespace |
+| `byNamespaceKindUpdatedAt` | `[namespace, kind, updatedAt]` | Recent runs or imports (v2) |
 
-### 3.3 Record Envelope
-```typescript
-interface RecordEnvelope<T = unknown> {
-  namespace: string;        // e.g., "research"
-  kind: string;             // e.g., "note", "source", "run", "proposal"
-  id: string;               // stable UUID
-  subjectId: string;        // e.g., "retrieval-07-chapter"
-  schemaVersion: number;    // payload schema version
-  createdAt: string;        // ISO 8601
-  updatedAt: string;        // ISO 8601
-  payload: T;               // application-specific data
-  provenance?: Provenance;  // optional metadata
-  revision?: number;        // optimistic concurrency
+### `metadata` object store
+
+Key path: `key`. Stores `schemaVersion`, `platformVersion` and the last
+migration result. No installation identifier, device fingerprint or usage
+telemetry is stored.
+
+### Record envelope
+
+```text
+{
+  namespace: "research",
+  kind: "note",
+  id: "9f0c…",
+  subjectId: "retrieval-07-chapter",
+  schemaVersion: 1,
+  createdAt: "2026-10-25T12:00:00.000Z",
+  updatedAt: "2026-10-25T12:05:00.000Z",
+  revision: 3,
+  payload: { ... application meaning ... },
+  provenance: { origin: "reader", application: "programmer.ie/research-workspace" }
 }
 ```
 
-### 3.4 Design Rationale: Generic Record Store vs. Per-Application Stores
+- The key is a compound key, so the same `id` can exist in different
+  namespaces and the same `id` can exist under different kinds.
+- `subjectId` is optional for generic use but required by the research app.
+- `revision` starts at 1 and increments on every write.
+- `payload` is a bounded JSON object. Non-JSON values, cycles, reserved keys,
+  excessive depth and oversized values are rejected.
+- Provenance is optional and application-defined. The engine only requires it
+  to be a bounded JSON object.
+- Timestamps are generated by the write path. Import preserves and validates
+  them.
 
-**Chosen: Generic record store with compound key and indexes**
+### Generic store vs. separate stores per application
 
-| Factor | Generic Store | Per-App Stores |
-|--------|---------------|----------------|
-| Migration cost | One migration for all apps | Migration per app store |
-| Schema evolution | Add indexes as needed | New stores = new migrations |
-| Namespace isolation | Index-based | Native |
-| Query flexibility | Rich compound indexes | Limited to store design |
-| Future-proofing | New kinds = no schema change | New store = migration |
+| Concern | One generic `records` store | One object store per application |
+|---|---|---|
+| New feature kinds | No database migration | New store = new schema version |
+| Upgrades | One deterministic migration path | Every feature participates in every upgrade |
+| Namespace isolation | Indexed compound key | Physical store boundaries |
+| Cross-feature queries | One indexed contract | Requires cross-store coordination |
+| Future Language records | Add a namespace/kind | Add a store and migration |
+| Risk | A shared envelope must remain general | Strong isolation but repeated migration cost |
 
-The generic design minimizes repeated database migrations when new application features are introduced. New record kinds (e.g., `language.interaction`) require only index updates, not new object stores.
+**Decision:** one generic store. Namespaces and kinds provide logical
+isolation. The platform adds an index only when a real query requires it.
 
 ---
 
 ## 4. Public JavaScript API
 
-```typescript
-// Entry point
-const store = await BookkitLocal.open({
-  namespace: "research",
-  databaseName?: string,  // optional override
+```js
+const BookkitLocal = (await import('/js/bookkit-local/index.js')).default;
+const store = await BookkitLocal.open({ namespace: 'research' });
+
+const saved = await store.put({
+  kind: 'note',
+  id: crypto.randomUUID(),
+  subjectId: 'retrieval-07-chapter',
+  schemaVersion: 1,
+  payload: { text: 'Investigate the claim.' }
 });
 
-// CRUD
-await store.get(kind: string, id: string): Promise<RecordEnvelope | null>;
-await store.put(record: Omit<RecordEnvelope, "createdAt" | "updatedAt" | "revision">): Promise<RecordEnvelope>;
-await store.delete(kind: string, id: string): Promise<void>;
+await store.put(
+  { ...saved, payload: { text: 'Revised' } },
+  { expectedRevision: saved.revision }
+);
 
-// Query
-await store.list(options: {
-  kind?: string;
-  subjectId?: string;
-  since?: string;  // updatedAt ISO string
-  limit?: number;
-}): Promise<RecordEnvelope[]>;
-
-// Batch
-await store.batch(operations: Array<{ type: "put" | "delete", record?: ..., kind?: ..., id?: ... }>): Promise<void>;
-
-// Capability
-await BookkitLocal.checkAvailability(): Promise<{ available: boolean; reason?: string; estimate?: StorageEstimate }>;
-
-// Portability
-await store.export(options: { kinds?: string[]; subjectIds?: string[] }): Promise<ExportFormat>;
-await store.import(data: ExportFormat, policy: "merge" | "replace" | "skip"): Promise<ImportResult>;
-
-// Lifecycle
-await store.close(): Promise<void>;
+const notes = await store.list({ kind: 'note', subjectId: 'retrieval-07-chapter' });
+const note = await store.get('note', saved.id);
+await store.delete('note', saved.id, { expectedRevision: saved.revision });
+await store.close();
 ```
 
-### 4.1 Transaction Guarantees
-- All write operations resolve only after IndexedDB transaction commits
-- `onsuccess` on request ≠ committed; use `transaction.oncomplete`
-- Errors are thrown, never swallowed
+Required operations include get, upsert, batch, delete, delete-subject,
+clear-namespace, count, indexed list, export, import, diagnostics and close.
+Writes resolve only after `transaction.oncomplete`, not after a request
+`onsuccess`.
 
-### 4.2 Events
-```typescript
-// Dispatched on window
-bookkit:local:ready                    // { namespace }
-bookkit:local:record-committed         // { namespace, kind, id, subjectId }
-bookkit:local:record-deleted           // { namespace, kind, id, subjectId }
-bookkit:local:storage-error            // { namespace, error, operation }
-bookkit:local:version-blocked          // { namespace, oldVersion, newVersion }
-```
-- Payloads contain IDs and metadata only, never full record content
-- Listeners are optional; storage layer has no dependency on consumers
+### Concurrency policy
+
+- Every write increments `revision`.
+- Callers editing existing records **should** pass `expectedRevision`.
+- A mismatch throws `ConflictError` (`code: "CONFLICT"`) and does not write.
+- Omitting `expectedRevision` is a deliberate last-write-wins upsert.
+- The research workspace treats a conflict as a draft-preservation event and
+  offers “save as new note” rather than overwriting.
+
+### Events
+
+`bookkit:local:ready`, `record-committed`, `record-deleted`,
+`namespace-cleared`, `import-completed`, `storage-error`, `version-blocked`,
+`version-change` and `connection-closed`.
+
+Events contain IDs, namespace, kind, subject, revision and timestamps. They
+never contain record payloads. BroadcastChannel messages carry the same
+metadata; IndexedDB remains authoritative.
+
+### Diagnostics and failure handling
+
+- `checkAvailability()` performs a capability check without creating a probe
+  database.
+- `open()` surfaces `StorageUnavailableError`, `QuotaExceededError`,
+  `VersionMismatchError`, `UpgradeBlockedError`, `ConnectionClosedError` and
+  transaction errors with stable codes.
+- `getDiagnostics()` reports the schema version and, when available,
+  `navigator.storage.estimate()` and `persisted()`.
+- `requestPersistence()` is an optional user action. Persistence is not a
+  backup and is described that way in the UI.
+- The UI must never show “Saved” after a failed or uncommitted write. It never
+  silently falls back to memory-only storage.
+
+### Version-change and blocked upgrades
+
+- `onversionchange` closes the old connection immediately and emits
+  `version-blocked` with reason `version-change`. Old tabs are told to reload.
+- `onblocked` emits `version-blocked` with reason `blocked`; the upgrade
+  proceeds when the other connection closes.
+- Opening an older schema against a newer database is rejected with
+  `VERSION_MISMATCH`. The database is never deleted to “fix” it.
+- An upgrade runs inside IndexedDB's upgrade transaction. A thrown error aborts
+  and rolls back; a failed upgrade leaves the previous version and data intact.
 
 ---
 
-## 5. Namespacing and Identity
+## 5. Namespacing and identity
 
-- **Namespace**: Top-level separation (e.g., `research`, `annotations`, `learning`, `language`)
-- **SubjectId**: Stable chapter identifier (`research_id` from companion, e.g., `retrieval-07-chapter`)
-- **Kind**: Record type within namespace (e.g., `note`, `source`, `run`, `proposal`, `claim`, `finding`)
-- **Id**: UUID v4 generated client-side
-
-This allows multiple applications to coexist without collision and enables cross-subject queries within a namespace.
-
----
-
-## 6. Extension Strategy
-
-### 6.1 Future Application Namespaces
-The platform accepts any namespace string. Future features register their kinds:
-```typescript
-// In application code (Programmer.ie or future Language work)
-const RESEARCH_KINDS = ["note", "source", "run", "proposal", "claim", "finding"] as const;
-```
-
-### 6.2 Schema Versioning per Kind
-- Each `kind` carries its own `schemaVersion`
-- Migration functions registered per kind
-- Platform provides migration runner; apps provide transformers
-
-### 6.3 AI Adapter Contract (Future)
-```typescript
-interface ResearchAssistant {
-  run(task: "analyse-claims" | "extract-sources" | "draft-proposal", input: {
-    chapterContext: ChapterContext;
-    sources: Source[];
-    notes: Note[];
-    permissions: Permissions;
-  }): Promise<AssistantResult>;
-}
-```
-Not implemented in this milestone; documented for future compatibility.
+- **Namespace** is the application boundary: `research`, `annotations`,
+  `learning`, `language`, etc.
+- **Kind** is the record type within the namespace: `note`, `source`, `run`,
+  `proposal`, `import`.
+- **Subject** is the application's stable domain identity. Programmer.ie uses
+  the companion's `research_id` (for example `retrieval-07-chapter`), never the
+  current URL, display title or chapter number alone.
+- **ID** is a stable client-generated identifier. Arrays are never used as
+  identity.
+- The research record types map to logical names: `research.note`,
+  `research.source`, `research.run`, `research.proposal`,
+  `research.imported-report`.
 
 ---
 
-## 7. Export/Import Format
+## 6. Extension strategy
+
+The extension mechanism is the record contract plus namespaces and kinds, not a
+plugin framework.
+
+A future Language consumer could use:
+
+```js
+const store = await BookkitLocal.open({ namespace: 'language' });
+await store.put({
+  kind: 'interaction',
+  id: crypto.randomUUID(),
+  subjectId: 'session-42',
+  schemaVersion: 1,
+  payload: {
+    role: 'reader',
+    text: 'Use shorter explanations.',
+    observedAt: '2026-10-25T12:00:00.000Z'
+  },
+  provenance: { origin: 'reader' }
+});
+```
+
+That application owns its payload validation and migrations. Bookkit adds no
+personality model, embeddings, vector index or agent memory.
+
+Migration support is deliberately small: an ordered set of synchronous schema
+steps in `migrations.js`. Applications can add payload migration functions
+without changing the database schema. A full plugin registry was rejected as
+unnecessary complexity before a second concrete consumer exists.
+
+---
+
+## 7. Export and import
+
+The portable JSON format is:
 
 ```json
 {
   "format": "bookkit-local-export",
   "version": 1,
-  "exportedAt": "2026-10-20T12:00:00Z",
-  "origin": { "namespace": "research", "application": "programmer.ie" },
+  "exportedAt": "2026-10-25T12:00:00.000Z",
+  "origin": { "namespace": "research", "application": "bookkit-local" },
   "subjects": ["retrieval-07-chapter"],
-  "kinds": ["note", "source", "run", "proposal"],
-  "records": [
-    { "namespace": "research", "kind": "note", "id": "...", "subjectId": "...", "schemaVersion": 1, "createdAt": "...", "updatedAt": "...", "payload": {...} }
-  ],
-  "integrity": { "recordCount": 42, "checksum": "sha256..." }
+  "kinds": ["note", "source", "run", "proposal", "import"],
+  "records": [],
+  "integrity": { "recordCount": 0, "checksum": "sha256…" }
 }
 ```
 
-- Import validates format, version, bounds
-- Rejects unsupported/dangerous structures
-- Conflict policy: merge (newer wins), replace, skip
-- Atomic batch import
+- Imports validate format/version, origin namespace, timestamp shape, record
+  identity, JSON bounds, duplicate keys and checksum.
+- Unsupported format versions are rejected rather than guessed at.
+- Namespaces may not be remapped implicitly.
+- `merge` (newer revision/timestamp), `replace` and `skip` policies are
+  explicit.
+- Import is one IndexedDB transaction: either the accepted batch commits or
+  none of it does.
+- Imported HTML/Markdown is data. The engine never injects it into the DOM.
+- Markdown export is a Programmer.ie application feature, not a generic engine
+  concern.
+
+Cloud sync is not implemented. The record format is a suitable basis for a
+future sync design, but no sync protocol is implied or promised.
 
 ---
 
-## 8. Security and Privacy Boundaries
+## 8. Security and privacy boundaries
 
-- No user accounts, no backend, no cloud sync
-- No automatic AI transmission; explicit user action required
-- No API keys in published JS
-- No `innerHTML` with untrusted content — `textContent` only
-- URL validation before making clickable
-- Imported JSON/Markdown treated as untrusted
-- Export as backup mechanism
-- Clear chapter research without affecting other namespaces
-- Storage failures visible to user
+- No account, backend, telemetry or cloud storage.
+- No automatic transmission of reader research to an AI provider.
+- No API keys in published JavaScript.
+- No `innerHTML` with user-authored or imported content. Programmer.ie renders
+  text with `textContent`, validates http/https URLs before creating links and
+  treats imported reports as untrusted plain text.
+- No private records in Hugo-generated HTML or analytics.
+- Clearing research deletes only the `research` namespace.
+- A user can export the current chapter, export all reader research, import a
+  previous export, clear the current chapter or clear all reader research with
+  strong confirmation.
+- The platform's event details never contain payloads.
+- Storage failures are visible; the public research prompt and downloads remain
+  available without JavaScript or IndexedDB.
 
----
+### Known fingerprint limitation
 
-## 9. Testing Strategy
-
-### 9.1 Bookkit Unit & Browser Tests
-- Database creation, versioned schema
-- CRUD, namespace/subject isolation, indexed queries
-- Atomic transactions, failure handling, reopen persistence
-- Migration v1→v2 with data preservation
-- Multi-tab upgrade blocking, versionchange handling
-- Concurrent update policy (optimistic revision)
-- Export/import, conflict handling, invalid rejection
-- Missing IndexedDB, quota errors, event notification
-
-### 9.2 Programmer.ie Integration Tests (Playwright)
-- Open chapter 7 → add note → save → reload → note restored
-- Chapter isolation: notes don't leak across chapters
-- Export/import round-trip
-- Revision warning when fingerprint changes
-- No-JS fallback works
-
-### 9.3 Hugo Build Tests
-- `hugo --gc --minify --panicOnWarning` in both repos
-- Bookkit `exampleSite` build
-- Programmer.ie build
+The chapter fingerprint hashes normalised rendered prose. It does not reliably
+detect code-only, image or external-resource changes. The UI says “chapter
+prose changed” and never claims complete content integrity. A future extension
+can add additional fingerprints without rewriting the current algorithm.
 
 ---
 
-## 10. Deferred Functionality
+## 9. Testing strategy
 
-- Cloud sync / cross-device
-- Service worker background sync
-- Vector search / embeddings
-- AI personality / agent memory
-- Automatic research execution
-- Reading progress migration to IndexedDB (documented path only)
+### Bookkit
+
+- Real Chromium IndexedDB tests in `tests/platform.browser.cjs` and
+  `tests/records.browser.cjs` (no mocked IndexedDB).
+- Included cases: creation, CRUD, commit durability, namespace/subject
+  isolation, indexed queries, atomic batches, events, export/import,
+  conflicts, invalid/future/duplicate imports, v1→v2 migration with data
+  preservation, failed-upgrade rollback, blocked upgrade recovery,
+  versionchange closure, optimistic concurrency, cross-tab BroadcastChannel,
+  browser-restart persistence with a persistent profile, missing IndexedDB and
+  storage diagnostics.
+- `python -m pytest -q tests` and the exampleSite Hugo build remain the
+  regression gates.
+
+### Programmer.ie
+
+- `tests/research-workspace.browser.cjs` covers real note autosave/persistence,
+  page close/reopen, chapter isolation, sources, runs and explicit completion,
+  proposal drafts, raw report import, revision warnings with a modified
+  fingerprint fixture, export/clear/import, public-history isolation, a fresh
+  browser context, XSS/URL safety, malformed and oversized imports, keyboard
+  tabs, 320/375/768/1280px layout, unavailable IndexedDB and external-request
+  privacy.
+- Existing `research-pack.browser.cjs` continues to cover the public prompt,
+  downloads, no-JS fallback, heading order, copy fallback and responsive layout.
+
+### Hugo builds
+
+- `hugo --source exampleSite --gc --minify --panicOnWarning` in Bookkit.
+- `hugo --gc --minify --panicOnWarning` in Programmer.ie, with the local module
+  replace and `--ignoreVendorPaths "github.com/ernanhughes/hugo-bookkit"` during
+  cross-repository testing.
 
 ---
 
-## 11. Implementation Plan
+## 10. Risks and mitigations
 
-### BK-LD01A — Architecture and Baseline (this document)
-- Repository audit ✓
-- Architecture decision record ✓
-- Current test results
-- Proposed generic data API
-- Schema design
-- Integration plan
-- Risk register
+| Risk | Mitigation |
+|---|---|
+| A stale `_vendor` tree masks new Bookkit code | Use `--ignoreVendorPaths` locally; release and re-vendor deliberately |
+| A browser evicts IndexedDB | Visible status, export, optional persist request, no “backup” claim |
+| Multi-tab upgrade blocked forever | Versionchange closes old connections; blocked event tells the user to close/reload |
+| Concurrent edits overwrite | Revision checks; conflict UI preserves the draft |
+| Imported report contains markup/scripts | Plain-text storage/render, URL allowlist, no HTML injection |
+| Payload schema drift | Per-record `schemaVersion`; application validators and documented migration points |
+| Prose fingerprint misses non-prose changes | Explicit limitation; future additional fingerprints |
+| Large production dependency change unreleased | Local feature branches; no push/tag/deploy; report pending version |
 
-### BK-LD01B — Reusable IndexedDB Platform (Bookkit)
-- `static/js/bookkit-local/database.js` — DB lifecycle, migrations
-- `static/js/bookkit-local/records.js` — Record envelope, CRUD, queries
-- `static/js/bookkit-local/migrations.js` — Migration runner, v1→v2 test
-- `static/js/bookkit-local/events.js` — Event dispatcher
-- `static/js/bookkit-local/portability.js` — Export/import
-- `static/js/bookkit-local/index.js` — Public API export
-- `layouts/partials/bookkit/local-data/head-assets.html` — Conditional CSS
-- `layouts/partials/bookkit/local-data/body-assets.html` — Conditional JS
-- Tests: browser tests for all above
+---
 
-### BK-LD01C — Research Workspace Integration (Programmer.ie)
-- Add "My Research Workspace" section to `pack.html`
-- `static/js/research-workspace.js` — UI logic using BookkitLocal API
-- `static/css/research-workspace.css` — Scoped styles
-- Notes, sources, runs, proposals with autosave
-- Chapter revision detection and warnings
-- Export/import UI
+## 11. Deferred
 
-### BK-LD01D — Research Import and AI Extension Boundary
-- Import AI research workflow (paste/import report)
-- Documented AI adapter contract
-- Provenance handling
-
-### BK-LD01E — Verification and Release Handoff
-- All tests passing
-- Hugo builds clean
-- Cross-repo integration report
-- Local commits, version recommendation
-- Final report
+- Cross-device sync, accounts, hosted database.
+- Vector search, embeddings, semantic index.
+- Automated/paid AI inference, background research.
+- Service worker or background job engine.
+- Migrating reading progress to IndexedDB.
+- A plugin registry or generic UI framework.
+- Automated parsing of imported AI reports. The raw report is preserved and
+  marked unverified; structured extraction is deferred.

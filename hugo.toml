@@ -28,6 +28,9 @@ disableKinds = ["taxonomy", "term", "rss"]
     math = true
     mermaid = true
     research = false
+    # Reusable browser-local IndexedDB platform. A page opts in with
+    # `bookkit_local_data = true`; this flag alone loads nothing.
+    localData = false
 
   # R21B: reusable reader-facing research defaults. Consuming sites
   # enable the feature and point at their R19 dossier tree; trusted API

@@ -1,0 +1,11 @@
+{{ define "main" }}
+<article class="bookkit-prose">
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+  <label for="local-data-demo-note">A note stored in this browser</label>
+  <textarea id="local-data-demo-note" rows="5" placeholder="Type here, reload, and the note should return." data-local-data-demo-note></textarea>
+  <p role="status" aria-live="polite" data-local-data-demo-status>Opening local storage…</p>
+  <noscript><p>This demonstration needs JavaScript and IndexedDB.</p></noscript>
+</article>
+<script type="module" src="{{ "js/local-data-demo.js" | relURL }}"></script>
+{{ end }}
