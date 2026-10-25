@@ -357,15 +357,17 @@ can add additional fingerprints without rewriting the current algorithm.
 
 ### Bookkit
 
-- Real Chromium IndexedDB tests in `tests/platform.browser.cjs` and
-  `tests/records.browser.cjs` (no mocked IndexedDB).
+- Real Chromium IndexedDB tests in `tests/platform.browser.cjs`,
+  `tests/records.browser.cjs` and `tests/upgrade-v0.4.2.browser.cjs` (no mocked
+  IndexedDB).
 - Included cases: creation, CRUD, commit durability, namespace/subject
   isolation, indexed queries, atomic batches, events, export/import,
   conflicts, invalid/future/duplicate imports, v1→v2 migration with data
-  preservation, failed-upgrade rollback, blocked upgrade recovery,
-  versionchange closure, optimistic concurrency, cross-tab BroadcastChannel,
-  browser-restart persistence with a persistent profile, missing IndexedDB and
-  storage diagnostics.
+  preservation, migration from data created by the actual released v0.4.2
+  runtime, failed-upgrade rollback, downgrade rejection, blocked upgrade
+  recovery, versionchange closure of a live v0.4.2 connection, optimistic
+  concurrency, cross-tab BroadcastChannel, browser-restart persistence with a
+  persistent profile, missing IndexedDB and storage diagnostics.
 - `python -m pytest -q tests` and the exampleSite Hugo build remain the
   regression gates.
 

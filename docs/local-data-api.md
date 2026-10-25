@@ -218,9 +218,16 @@ a version conflict.
 ```bash
 node tests/records.browser.cjs
 node tests/platform.browser.cjs
+node tests/upgrade-v0.4.2.browser.cjs
+node tests/local-data-demo.browser.cjs <base-url>
 python -m pytest -q tests
 hugo --source exampleSite --gc --minify --panicOnWarning
 ```
+
+`upgrade-v0.4.2.browser.cjs` uses a frozen copy of the released v0.4.2 runtime
+to create real schema-v1 records, then migrates them with the current runtime.
+It also verifies downgrade rejection and versionchange closure of the old
+connection.
 
 The browser tests use real Chromium IndexedDB. They do not mock the storage
 engine.

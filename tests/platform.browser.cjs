@@ -173,6 +173,16 @@ async function main() {
           rejected = true;
         }
         const afterFailure = await store.list({});
+        let namespaceMismatch = null;
+        try {
+          await store.batch([{
+            type: 'put',
+            record: BookkitLocal.createRecord('other', 'note', 's', { text: 'wrong namespace' }, { id: 'wrong-namespace' })
+          }]);
+        } catch (error) {
+          namespaceMismatch = error.code;
+        }
+        const afterNamespaceMismatch = await store.count({});
         await store.batch([
           { type: 'put', record: first },
           { type: 'put', record: BookkitLocal.createRecord('research', 'note', 's', { text: 'second' }, { id: 'second' }) },
@@ -180,10 +190,18 @@ async function main() {
         ]);
         const final = await store.list({});
         await store.close();
-        return { rejected, afterFailure: afterFailure.length, final: final.map((record) => record.id) };
+        return {
+          rejected,
+          afterFailure: afterFailure.length,
+          namespaceMismatch,
+          afterNamespaceMismatch,
+          final: final.map((record) => record.id)
+        };
       }, name);
       assert.equal(result.rejected, true);
       assert.equal(result.afterFailure, 0);
+      assert.equal(result.namespaceMismatch, 'VALIDATION_ERROR');
+      assert.equal(result.afterNamespaceMismatch, 0);
       assert.deepEqual(result.final, ['first']);
     });
 

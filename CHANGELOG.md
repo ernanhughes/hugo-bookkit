@@ -5,7 +5,7 @@ All notable changes to Hugo Bookkit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased — recommended v0.5.0]
+## [v0.5.0] - 2026-10-25
 
 ### Added
 - Local Data Platform (`bookkit-local/`) hardening and completion:
@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Page-level opt-in (`bookkit_local_data = true`) so the runtime is not loaded
   on unrelated pages.
 - Real-browser tests: `tests/platform.browser.cjs`, `tests/records.browser.cjs`.
+- Released-runtime upgrade test: `tests/upgrade-v0.4.2.browser.cjs` uses the
+  frozen v0.4.2 runtime to create real v1 data, then verifies v2 migration,
+  downgrade rejection, live-connection closure and stale-write rejection.
 - ExampleSite local-data demo with reload persistence.
 - API documentation: `docs/local-data-api.md`.
 
@@ -42,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only the first.
 - Imports are atomic and reject future format versions, duplicate identities,
   malformed timestamps and unsafe/oversized structures.
+- A batch put whose record declares a different namespace is rejected unless
+  the operation explicitly supplies the override; it is never silently moved.
 
 ### Documentation
 - `docs/local-data-architecture.md` — updated architecture decision record.

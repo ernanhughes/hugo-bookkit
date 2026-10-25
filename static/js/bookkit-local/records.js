@@ -514,7 +514,24 @@ function normaliseBatchOperation(store, operation) {
   }
 
   if (operation.type === 'put') {
-    const namespace = operation.namespace || store.namespace;
+    const explicitNamespace = operation.namespace;
+    const declaredNamespace = operation.record && typeof operation.record === 'object'
+      ? operation.record.namespace
+      : undefined;
+
+    // An explicit operation.namespace is a deliberate cross-namespace batch
+    // override (used by compatibility tooling). Without it, a record carrying
+    // another namespace must be rejected rather than silently rewritten.
+    if (!explicitNamespace
+      && declaredNamespace !== undefined
+      && declaredNamespace !== store.namespace) {
+      throw new ValidationError(
+        `Record namespace "${declaredNamespace}" does not belong to the "${store.namespace}" store; use an explicit batch namespace to override`,
+        { expected: store.namespace, received: declaredNamespace }
+      );
+    }
+
+    const namespace = explicitNamespace || store.namespace;
     const record = operation.record && typeof operation.record === 'object'
       ? { ...operation.record, namespace }
       : operation.record;
