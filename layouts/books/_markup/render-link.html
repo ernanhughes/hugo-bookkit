@@ -1,0 +1,53 @@
+{{/* Bookkit reference previews: Markdown link render hook for books pages.
+
+Authoring: [link text](ref:reference-id[#section]) renders an enhanced
+reference link with a static, accessible preview. Any other destination
+renders exactly like the shared examples destination resolver, so ordinary,
+external and resource links are unchanged.
+
+Eligibility is an explicit allowlist: data/bookkit/references.json
+(id -> { page, kind }). Only listed, published pages get previews.
+Unknown ids, missing pages, draft pages (in non-draft builds) and rejected
+identifiers never become links: they render as plain text plus a build
+warning, so the hook never fabricates navigation and never emits an
+unsafe href (Go templates replace unknown URL schemes with #ZgotmplZ).
+
+With the feature disabled, ref: links render verbatim (author markup
+preserved); everything else renders resolved as usual. No JavaScript runs
+at build time. Preview content is the target page's own rendered output
+(explicit `preview` front matter, else the page Summary): nothing is
+invented and no client-side Markdown parsing is needed. */}}
+{{- $destination := .Destination -}}
+{{- $cfg := partial "bookkit/references/config.html" .Page -}}
+{{- $isRef := strings.HasPrefix $destination "ref:" -}}
+{{- if and $cfg.enabled $isRef -}}
+  {{- $ref := strings.TrimPrefix "ref:" $destination -}}
+  {{- $parts := split $ref "#" -}}
+  {{- $id := index $parts 0 -}}
+  {{- $fragment := "" -}}
+  {{- if gt (len $parts) 1 -}}{{- $fragment = index $parts 1 -}}{{- end -}}
+  {{- $validID := findRE `^[a-z0-9][a-z0-9-]*$` $id -}}
+  {{- $validFrag := or (eq $fragment "") (findRE `^[A-Za-z0-9_.:-]+$` $fragment) -}}
+  {{- $entry := dict -}}
+  {{- if and $validID (not (strings.Contains $id "..")) (not (strings.Contains $id "/")) -}}
+    {{- $entry = index $cfg.manifest $id | default dict -}}
+  {{- end -}}
+  {{- $target := false -}}
+  {{- if and $entry $entry.page (not (strings.Contains $entry.page "..")) -}}
+    {{- with site.GetPage $entry.page -}}{{- $target = . -}}{{- end -}}
+  {{- end -}}
+  {{- $usable := and $target (or (not $target.Draft) $.Page.Site.BuildDrafts) -}}
+  {{- if and $usable $validFrag -}}
+    {{- $href := $target.RelPermalink -}}
+    {{- with $fragment -}}{{- $href = printf "%s#%s" $href . -}}{{- end -}}
+    {{- $preview := partial "bookkit/references/preview.html" (dict "page" $target "entry" $entry "id" $id "fragment" $fragment) -}}
+    <span class="bookkit-ref-wrap"><a class="bookkit-ref" data-bookkit-ref="{{ $id }}" aria-describedby="{{ $preview.descID }}" href="{{ $href }}"{{ with .Title }} title="{{ . }}"{{ end }}>{{ .Text }}</a><button class="bookkit-ref-toggle" type="button" data-bookkit-ref-toggle aria-expanded="false" aria-controls="{{ $preview.descID }}" aria-label="Show preview"><span aria-hidden="true">i</span></button><span class="bookkit-ref-preview" data-bookkit-ref-preview id="{{ $preview.descID }}" role="note">{{ $preview.body }}<span class="bookkit-ref-more"><a href="{{ $href }}">Read the full document</a></span></span></span>
+  {{- else -}}
+    {{- warnf "bookkit reference %q on page %s is not a published reference; rendering plain text" $destination .Page.RelPermalink -}}
+    <span class="bookkit-ref-unresolved">{{ .Text }}</span>
+  {{- end -}}
+{{- else if and (not $cfg.enabled) $isRef -}}
+  <a href="{{ $destination | safeURL }}"{{ with .Title }} title="{{ . }}"{{ end }}>{{ .Text }}</a>
+{{- else -}}
+  <a href="{{ partial "bookkit/examples/destination.html" (dict "page" .Page "destination" $destination) }}"{{ with .Title }} title="{{ . }}"{{ end }}>{{ .Text }}</a>
+{{- end -}}

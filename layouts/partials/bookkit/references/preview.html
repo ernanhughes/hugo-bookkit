@@ -1,0 +1,38 @@
+{{/* Bookkit reference previews: static preview fragment for one target page.
+
+Input: dict with keys page (the target Hugo page), entry (manifest entry),
+id (reference id), fragment (optional section anchor).
+Returns: dict with keys descID (stable describedby id) and body (rendered,
+bounded preview HTML: title, kind/status line, excerpt, no full document).
+
+The excerpt prefers an explicit `preview` front-matter field, else the page
+Summary. Both are page-rendered Markdown, so no client-side parsing and no
+unescaped runtime content. Over-long explicit previews only warn at build
+time; rendering stays faithful to the source. */}}
+{{- $page := .page -}}
+{{- $entry := .entry -}}
+{{- $kind := $entry.kind | default ($page.Params.reference_kind | default "reference") -}}
+{{- $status := $page.Params.status | default "" -}}
+{{- $explicit := $page.Params.preview | default "" -}}
+{{- $body := "" -}}
+{{- if $explicit -}}
+  {{- $plain := $explicit | plainify -}}
+  {{- if gt (len (split $plain " ")) 80 -}}
+    {{- warnf "bookkit reference preview for page %s exceeds 80 words; keep previews short" $page.RelPermalink -}}
+  {{- end -}}
+  {{- $body = $explicit | $page.RenderString (dict "display" "block") -}}
+{{- else -}}
+  {{- $body = $page.Summary -}}
+{{- end -}}
+{{- $meta := $kind -}}
+{{- with $status -}}{{- $meta = printf "%s · %s" $meta . -}}{{- end -}}
+{{- $n := 0 -}}
+{{- with $page.Scratch.Get "bookkitRefCount" -}}{{- $n = . -}}{{- end -}}
+{{- $page.Scratch.Set "bookkitRefCount" (add $n 1) -}}
+{{- $descID := printf "bookkit-ref-%s-%d" .id $n -}}
+{{- $html := printf "<span class=\"bookkit-ref-title\">%s</span><span class=\"bookkit-ref-meta\">%s</span><span class=\"bookkit-ref-excerpt\">%s</span>" ($page.Title | htmlEscape) ($meta | htmlEscape) $body -}}
+{{- if .fragment -}}
+  {{- $frag := .fragment | htmlEscape -}}
+  {{- $html = printf "%s<span class=\"bookkit-ref-section\">Section: <code>%s</code></span>" $html $frag -}}
+{{- end -}}
+{{- return dict "descID" $descID "body" ($html | safeHTML) -}}

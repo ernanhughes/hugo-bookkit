@@ -1,0 +1,112 @@
+/* Bookkit reference previews. The preview is static build-time markup;
+   CSS reveals it on hover/focus without JavaScript. The script only adds
+   Escape dismissal, touch toggling (data-open) and edge clamping. */
+.bookkit-ref-wrap {
+  position: relative;
+  display: inline;
+}
+
+.bookkit-ref-toggle {
+  display: none;
+  margin-left: 0.15rem;
+  padding: 0 0.35rem;
+  font-size: 0.8em;
+  line-height: 1.4;
+  border: 1px solid var(--bookkit-border);
+  border-radius: 999px;
+  background: var(--bookkit-card);
+  color: var(--bookkit-accent);
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .bookkit-ref-toggle {
+    display: inline-block;
+  }
+}
+
+.bookkit-ref-preview {
+  display: none;
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  top: 1.6em;
+  width: min(22rem, 80vw);
+  max-height: 16rem;
+  overflow: auto;
+  padding: 0.75rem 0.9rem;
+  background: var(--bookkit-card);
+  border: 1px solid var(--bookkit-border);
+  border-radius: var(--bookkit-radius);
+  box-shadow: var(--bookkit-shadow);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  text-align: left;
+  white-space: normal;
+}
+
+.bookkit-ref-wrap:hover .bookkit-ref-preview,
+.bookkit-ref-wrap:focus-within .bookkit-ref-preview,
+.bookkit-ref-wrap[data-open="true"] .bookkit-ref-preview {
+  display: block;
+}
+
+.bookkit-ref-wrap[data-dismissed="true"] .bookkit-ref-preview {
+  display: none;
+}
+
+.bookkit-ref-wrap.bookkit-ref-preview--align-right .bookkit-ref-preview {
+  left: auto;
+  right: 0;
+}
+
+.bookkit-ref-title {
+  display: block;
+  font-weight: 700;
+}
+
+.bookkit-ref-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--bookkit-muted);
+  margin-bottom: 0.35rem;
+}
+
+.bookkit-ref-excerpt > *:first-child {
+  margin-top: 0;
+}
+
+.bookkit-ref-excerpt > *:last-child {
+  margin-bottom: 0;
+}
+
+.bookkit-ref-section {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--bookkit-muted);
+}
+
+.bookkit-ref-more {
+  display: block;
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+@media (max-width: 560px), (pointer: coarse) {
+  .bookkit-ref-preview {
+    position: static;
+    width: auto;
+    max-height: 14rem;
+    margin-top: 0.4rem;
+  }
+  .bookkit-ref-wrap.bookkit-ref-preview--align-right .bookkit-ref-preview {
+    right: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bookkit-ref-preview {
+    scroll-behavior: auto;
+  }
+}

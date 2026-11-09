@@ -1,0 +1,25 @@
+{{/* Bookkit reference previews: normalized feature configuration.
+
+Input: the current Page.
+Returns: dict with keys enabled and manifest. The manifest is an explicit
+allowlist read from data/bookkit/references.json (overridable via
+[params.bookkit.references] manifest), mapping reference ids to { page, kind }.
+Loaded with readFile + transform.Unmarshal like the research dossier loader,
+so no data-API version dependency and no publishable manifest page.
+Safe defaults: disabled, empty manifest. Ordinary links are unaffected. */}}
+{{- $params := .Site.Params.bookkit -}}
+{{- $features := $params.features | default dict -}}
+{{- $rcfg := $params.references | default dict -}}
+{{- $path := $rcfg.manifest | default "data/bookkit/references.json" -}}
+{{- $manifest := dict -}}
+{{- if fileExists $path -}}
+  {{- with readFile $path -}}
+    {{- with transform.Unmarshal . -}}
+      {{- $manifest = . -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return dict
+  "enabled" ($features.references | default false)
+  "manifest" $manifest
+-}}

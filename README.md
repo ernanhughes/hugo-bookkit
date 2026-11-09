@@ -104,6 +104,34 @@ BookKit uses the namespaced `params.bookkit` configuration. Defaults ship with t
 
 ## Research reader support
 
+## Book reference previews
+
+Books can link approved Markdown documents with hover/keyboard/touch
+previews. Author with `[ADR 0001 — …](ref:adr-0001)` on any books page;
+only allowlisted ids render previews, everything else renders normally.
+See [Book reference previews](docs/book-reference-previews.md).
+
+```toml
+[params.bookkit.features]
+  references = true
+```
+
+```json
+// data/bookkit/references.json
+{
+  "adr-0001": {
+    "page": "references/decisions/0001-evidence-first-claim-contract",
+    "kind": "architecture-decision"
+  }
+}
+```
+
+Previews are static build-time markup (explicit `preview` front matter,
+else the page Summary) with a CSS-only fallback, Escape dismissal, a
+touch toggle, and viewport clamping. No client-side Markdown parsing,
+no fabricated navigation: unknown ids render as plain text with a build
+warning.
+
 ## Local Data Platform (BK-LD01)
 
 BookKit includes a reusable browser-local persistence platform built on native

@@ -1,0 +1,9 @@
+{{/* Bookkit reference previews: enhancement script. Emitted only when the
+references feature is enabled. The preview itself is static markup, so the
+link and full document work without JavaScript; the script only adds Escape
+dismissal, touch toggling and viewport clamping. Consuming sites with their
+own base layout include this partial before </body>. */}}
+{{- $cfg := partial "bookkit/references/config.html" . -}}
+{{- if $cfg.enabled -}}
+<script src="{{ "js/bookkit-references.js" | relURL }}" defer></script>
+{{- end -}}

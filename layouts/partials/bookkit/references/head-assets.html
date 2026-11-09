@@ -1,0 +1,7 @@
+{{/* Bookkit reference previews: stylesheet. Emitted only when the
+references feature is enabled. Consuming sites with their own base layout
+include this partial in <head>; Bookkit's own base layout includes it too. */}}
+{{- $cfg := partial "bookkit/references/config.html" . -}}
+{{- if $cfg.enabled -}}
+<link rel="stylesheet" href="{{ "css/bookkit-references.css" | relURL }}">
+{{- end -}}

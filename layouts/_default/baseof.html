@@ -22,6 +22,7 @@
   {{- end }}
   {{ partial "bookkit/research/body-assets.html" . }}
   {{ partial "bookkit/local-data/body-assets.html" . }}
+  {{ partial "bookkit/references/body-assets.html" . }}
   <script src="{{ "js/bookkit-examples.js" | relURL }}" defer></script>
   {{ if eq .Section "examples" }}<script src="{{ "js/bookkit-search.js" | relURL }}" defer></script>{{ end }}
   {{- range $cfg.customJS }}
