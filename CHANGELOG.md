@@ -5,6 +5,31 @@ All notable changes to Hugo Bookkit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.0] - 2026-11-09
+
+### Added
+- Book reference previews (`ref:` link scheme with static hover/keyboard/touch
+  popovers) for books pages:
+  - Markdown render hook (`layouts/books/_markup/render-link.html`) that
+    enhances only allowlisted `ref:id[#section]` links; ordinary, external
+    and resource links render exactly as before.
+  - Explicit per-site allowlist (`data/bookkit/references.json`, id to page)
+    with graceful plain-text degradation and build warnings for unknown,
+    missing, draft, or rejected identifiers (including path traversal).
+  - Static build-time preview fragments (explicit `preview` front matter,
+    else the page Summary; 80-word budget warns) — no client-side Markdown
+    parsing, no `innerHTML`, no remote fetching.
+  - Keyboard (focus/Enter/Escape), touch toggle, viewport clamping, and a
+    no-JavaScript CSS fallback; feature flagged by
+    `[params.bookkit.features] references`.
+  - Asset partials (`head-assets`, `body-assets`) wired into the base layout
+    behind the flag, following the research/local-data pattern.
+- Documentation: `docs/book-reference-previews.md` (architecture, authoring,
+  security, accessibility, multi-book rules) plus a README section.
+- Tests: `tests/test_references.py` (17 fixture-site build assertions) and
+  `tests/references.browser.cjs` manual QA script for interactive behavior
+  (Playwright not available in this environment; browser run outstanding).
+
 ## [v0.5.0] - 2026-10-25
 
 ### Added
