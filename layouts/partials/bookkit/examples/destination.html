@@ -1,5 +1,10 @@
-{{/* Resolve relative links once against the example, not its inline host. */}}
+{{/* Resolve relative links once against the example, not its inline host.
+  Shortcode placeholders (HAHAHUGOSHORTCODE) in link destinations must pass
+  through untouched so Hugo can expand e.g. relref after the render hook.
+  Resolving them as relative paths doubles the chapter prefix. */}}
 {{- $destination := .destination -}}
+{{- $isShortcodePlaceholder := strings.Contains $destination "HAHAHUGOSHORTCODE" -}}
+{{- if not $isShortcodePlaceholder -}}
 {{- $url := urls.Parse $destination -}}
 {{- if and (not $url.IsAbs) $url.Path (not (strings.HasPrefix $destination "//")) -}}
   {{- $resolved := "" -}}
@@ -17,5 +22,6 @@
   {{- with $url.RawQuery -}}{{- $resolved = printf "%s?%s" $resolved . -}}{{- end -}}
   {{- with $url.Fragment -}}{{- $resolved = printf "%s#%s" $resolved . -}}{{- end -}}
   {{- $destination = $resolved -}}
+{{- end -}}
 {{- end -}}
 {{- return $destination -}}

@@ -5,6 +5,18 @@ All notable changes to Hugo Bookkit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.1] - 2026-11-13
+
+### Fixed
+- Chapter links written as `[text]({{< relref ... >}})` no longer receive a
+  doubled page prefix. Hugo expands the shortcode after the link render hook,
+  so the shared example destination resolver now passes `HAHAHUGOSHORTCODE`
+  placeholders through untouched. Ordinary relative, root-relative, fragment
+  and resource links are unchanged.
+- Regression coverage: `tests/test_chapter_links.py` builds a two-book fixture
+  and asserts relref, relative, root and fragment links resolve to the sibling
+  chapter, with no doubled prefix, cross-book leak or placeholder leakage.
+
 ## [v0.6.0] - 2026-11-09
 
 ### Added
